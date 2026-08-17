@@ -94,6 +94,46 @@ ve el usuario son las líneas de actividad ("Creando la estructura",
 escribe. No es un bug; conviene saberlo antes de tocar el prompt intentando
 arreglarlo.
 
+## Colaboración en vivo
+
+Si dos personas abren el mismo libro, cada una ve los cambios de la otra sin
+refrescar. Va todo por un canal de Supabase Realtime (`lib/realtime/`):
+
+- **Postgres Changes** en `chapters` y `ebooks`, filtrados por libro. Los
+  capítulos que escribe el agente de un compañero aparecen en tu lista. Se
+  marcan con un círculo hueco, distinto del relleno que usa tu propio agente:
+  "lo acabo de escribir yo" y "lo ha cambiado otra persona" no son lo mismo.
+- **Presencia** con quién está conectado y en qué fase va su agente. Los avatares
+  salen en la cabecera; el que está trabajando lleva un punto latiendo.
+
+Realtime por sí solo enseña los cambios, pero **no impide el pisotón**: dos
+agentes escribiendo a la vez terminan en "gana el último y nadie se entera". Por
+eso, mientras el agente de otra persona trabaja, el envío se bloquea con su
+nombre. La presencia se cae sola al cerrar la pestaña, así que no se queda
+enganchado.
+
+`messages` queda fuera del canal a propósito: el chat de otra persona no aporta
+nada en tu pantalla y son las filas más pesadas.
+
+```bash
+npm run check:realtime   # necesita un usuario de prueba, ver el script
+```
+
+### Dos trampas de Realtime que costaron encontrar
+
+**`REPLICA IDENTITY FULL` es obligatorio para los UPDATE.** Sin él, Realtime no
+puede evaluar RLS sobre la fila antigua y **descarta el evento en silencio**: los
+INSERT llegan, los UPDATE no, y no hay ningún error en ninguna parte.
+
+**Cambiar la replica identity y añadir la tabla a la publicación en la misma
+migración no basta.** Realtime cachea la metadata de la tabla al leerla y se
+queda con la identidad vieja. Hay que sacarla y volver a añadirla a la
+publicación *después*, en otra transacción.
+
+Y una que no es trampa sino diseño: en los **DELETE solo llega la clave
+primaria**, aun con identidad FULL. Supabase no puede aplicar RLS sobre una fila
+ya borrada, así que no manda el resto. Al cliente le basta el id.
+
 ## Tres cosas que rompen si se tocan sin querer
 
 **1. Prompt caching.** El orden de renderizado es `tools` → `system` →
@@ -128,6 +168,8 @@ Funcionando y verificado:
 - Cierre de toda la aplicación vía `proxy.ts`
 - Esquema, políticas RLS y funciones de reordenamiento (0 advertencias de seguridad)
 - Generación de EPUB válida (`npm run check:epub`, 21/21)
+- Colaboración en vivo con dos sesiones reales: INSERT, UPDATE, DELETE y
+  presencia (`npm run check:realtime`, 8/8)
 - Build de producción, typecheck y lint limpios
 
 Sin verificar end-to-end (hace falta una sesión iniciada en el navegador):

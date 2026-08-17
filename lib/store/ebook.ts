@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { createClient } from "@/lib/supabase/client";
 import type { Chapter, Ebook } from "@/lib/ebook/types";
+import type { Peer } from "@/lib/realtime/ebook-channel";
 import type { ChatMessage } from "./types";
 
 export type AgentPhase = "idle" | "thinking" | "working" | "error";
@@ -20,8 +21,12 @@ type EbookStore = {
   phase: AgentPhase;
   error: string | null;
   stream: StreamState;
-  /** Capítulos que el agente ha tocado en este turno; se resaltan en la lista. */
+  /** Capítulos que TU agente ha tocado en este turno; se resaltan en la lista. */
   touched: string[];
+  /** Capítulos que ha cambiado otra persona del equipo, vía Realtime. */
+  remoteTouched: string[];
+  /** Quién más tiene este libro abierto y qué está haciendo. */
+  peers: Peer[];
   selectedChapterId: string | null;
   hydrated: boolean;
 
@@ -32,6 +37,14 @@ type EbookStore = {
   upsertChapter: (chapter: Chapter) => void;
   removeChapter: (id: string) => void;
   replaceChapters: (chapters: Chapter[]) => void;
+
+  // Entradas desde Realtime. Van por su propia puerta para no confundirse con
+  // lo que hace tu agente: `touched` significa "esto lo acaba de tocar mi
+  // turno", y marcar ahí los cambios ajenos haría mentir a la lista.
+  applyRemoteChapter: (chapter: Chapter) => void;
+  applyRemoteChapterDelete: (id: string) => void;
+  applyRemoteEbook: (ebook: Ebook) => void;
+  setPeers: (peers: Peer[]) => void;
 
   appendMessage: (message: ChatMessage) => Promise<void>;
   setPhase: (phase: AgentPhase) => void;
@@ -51,6 +64,8 @@ export const useEbook = create<EbookStore>((set, get) => ({
   error: null,
   stream: EMPTY_STREAM,
   touched: [],
+  remoteTouched: [],
+  peers: [],
   selectedChapterId: null,
   hydrated: false,
 
@@ -86,13 +101,22 @@ export const useEbook = create<EbookStore>((set, get) => ({
         content: row.content,
       })) as ChatMessage[],
       selectedChapterId: chapters[0]?.id ?? null,
+      remoteTouched: [],
+      peers: [],
       hydrated: true,
       error: null,
     });
   },
 
   setSelectedChapter(id) {
-    set({ selectedChapterId: id });
+    // Abrir un capítulo cuenta como haberlo visto: se le quita la marca de
+    // "cambiado por otra persona".
+    set((prior) => ({
+      selectedChapterId: id,
+      remoteTouched: id
+        ? prior.remoteTouched.filter((value) => value !== id)
+        : prior.remoteTouched,
+    }));
   },
 
   async applyEbookPatch(patch) {
@@ -137,6 +161,49 @@ export const useEbook = create<EbookStore>((set, get) => ({
       chapters: [...chapters].sort((a, b) => a.position - b.position),
       touched: chapters.map((chapter) => chapter.id),
     });
+  },
+
+  applyRemoteChapter(chapter) {
+    set((prior) => {
+      const existing = prior.chapters.find((c) => c.id === chapter.id);
+
+      // El eco de tu propia escritura también llega por aquí. Si el contenido
+      // ya coincide, no se marca como cambio ajeno: si no, tu propia lista se
+      // llenaría de avisos de "alguien tocó esto".
+      const isEcho =
+        existing?.content === chapter.content &&
+        existing?.title === chapter.title &&
+        existing?.position === chapter.position;
+
+      const chapters = existing
+        ? prior.chapters.map((c) => (c.id === chapter.id ? chapter : c))
+        : [...prior.chapters, chapter];
+
+      return {
+        chapters: chapters.sort((a, b) => a.position - b.position),
+        remoteTouched:
+          isEcho || prior.remoteTouched.includes(chapter.id)
+            ? prior.remoteTouched
+            : [...prior.remoteTouched, chapter.id],
+      };
+    });
+  },
+
+  applyRemoteChapterDelete(id) {
+    set((prior) => ({
+      chapters: prior.chapters.filter((chapter) => chapter.id !== id),
+      remoteTouched: prior.remoteTouched.filter((value) => value !== id),
+      selectedChapterId:
+        prior.selectedChapterId === id ? null : prior.selectedChapterId,
+    }));
+  },
+
+  applyRemoteEbook(ebook) {
+    set({ ebook });
+  },
+
+  setPeers(peers) {
+    set({ peers });
   },
 
   async appendMessage(message) {

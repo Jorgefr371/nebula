@@ -79,6 +79,7 @@ export function Chat() {
   const error = useEbook((state) => state.error);
   const stream = useEbook((state) => state.stream);
   const hydrated = useEbook((state) => state.hydrated);
+  const peers = useEbook((state) => state.peers);
 
   const [draft, setDraft] = useState("");
   const [showThinking, setShowThinking] = useState(false);
@@ -86,6 +87,15 @@ export function Chat() {
   const kickedOff = useRef(false);
 
   const busy = phase === "thinking" || phase === "working";
+
+  // Si el agente de otra persona está trabajando sobre este libro, lanzar el
+  // tuyo haría que gane la última escritura y se pierda trabajo sin aviso. Se
+  // bloquea el envío mientras dure. La presencia se va sola al cerrar la
+  // pestaña, así que esto no se queda enganchado.
+  const busyPeer = peers.find(
+    (peer) => peer.phase === "working" || peer.phase === "thinking",
+  );
+  const blocked = busy || Boolean(busyPeer);
 
   // La portada deja el primer prompt en sessionStorage. Se espera a que el libro
   // esté cargado: el agente necesita su id para escribir capítulos.
@@ -105,7 +115,7 @@ export function Chat() {
 
   function send() {
     const text = draft.trim();
-    if (!text || busy) return;
+    if (!text || blocked) return;
     setDraft("");
     void runAgent(text);
   }
@@ -172,6 +182,16 @@ export function Chat() {
       </div>
 
       <div className="border-t border-border p-3">
+        {busyPeer && !busy ? (
+          <div className="mb-2 flex items-center gap-2 rounded-xl border border-border bg-surface-raised px-3 py-2 text-[13px]">
+            <span className="size-1.5 shrink-0 animate-pulse rounded-full bg-primary" />
+            <span className="text-muted-foreground">
+              <span className="text-foreground">{busyPeer.name}</span> está
+              escribiendo en este libro. Espera a que termine para no pisaros.
+            </span>
+          </div>
+        ) : null}
+
         <div className="rounded-2xl border border-border bg-surface p-2 transition-colors focus-within:border-primary/60">
           <textarea
             value={draft}
@@ -188,17 +208,24 @@ export function Chat() {
               }
             }}
             rows={2}
-            placeholder={busy ? "Nébula está escribiendo…" : "Pide un cambio…"}
+            disabled={Boolean(busyPeer) && !busy}
+            placeholder={
+              busy
+                ? "Nébula está escribiendo…"
+                : busyPeer
+                  ? `Esperando a ${busyPeer.name}…`
+                  : "Pide un cambio…"
+            }
             className="w-full resize-none bg-transparent px-2 py-1.5 text-[14px] outline-none placeholder:text-muted-foreground/70"
           />
           <div className="flex justify-end px-1">
             <button
               type="button"
               onClick={send}
-              disabled={!draft.trim() || busy}
+              disabled={!draft.trim() || blocked}
               className={cn(
                 "grid size-8 place-items-center rounded-lg transition-colors",
-                draft.trim() && !busy
+                draft.trim() && !blocked
                   ? "bg-primary text-primary-foreground hover:bg-primary-hover"
                   : "cursor-not-allowed bg-surface-raised text-muted-foreground",
               )}

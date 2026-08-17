@@ -10,6 +10,7 @@ export function ChapterList() {
   const selectedChapterId = useEbook((state) => state.selectedChapterId);
   const setSelectedChapter = useEbook((state) => state.setSelectedChapter);
   const touched = useEbook((state) => state.touched);
+  const remoteTouched = useEbook((state) => state.remoteTouched);
 
   const totalWords = chapters.reduce(
     (sum, chapter) => sum + countWords(chapter.content),
@@ -48,6 +49,7 @@ export function ChapterList() {
           const words = countWords(chapter.content);
           const isSelected = selectedChapterId === chapter.id;
           const isTouched = touched.includes(chapter.id);
+          const isRemote = remoteTouched.includes(chapter.id);
 
           return (
             <button
@@ -81,10 +83,18 @@ export function ChapterList() {
                 </span>
               </span>
 
+              {/* Dos marcas distintas a propósito: lo que acaba de escribir tu
+                  agente y lo que ha cambiado otra persona no son lo mismo, y
+                  confundirlas hace que la lista mienta. */}
               {isTouched ? (
                 <span
                   className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary"
                   title="Modificado en este turno"
+                />
+              ) : isRemote ? (
+                <span
+                  className="mt-1.5 size-1.5 shrink-0 rounded-full ring-2 ring-accent"
+                  title="Cambiado por otra persona del equipo"
                 />
               ) : null}
             </button>

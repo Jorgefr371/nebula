@@ -3,8 +3,14 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
+import {
+  joinEbookChannel,
+  leaveEbookChannel,
+  publishPhase,
+} from "@/lib/realtime/ebook-channel";
 import { useEbook } from "@/lib/store/ebook";
 import { Chat } from "./chat";
+import { PeerBadges } from "./peer-badges";
 import { ChapterList } from "./chapter-list";
 import { EbookPreview } from "./ebook-preview";
 import { ExportMenu } from "./export-menu";
@@ -18,6 +24,34 @@ export function Workspace({ ebookId }: { ebookId: string }) {
     void load(ebookId);
   }, [load, ebookId]);
 
+  // Canal de colaboración: cambios en vivo y presencia del equipo.
+  useEffect(() => {
+    const store = useEbook.getState();
+
+    void joinEbookChannel(ebookId, {
+      onChapterUpsert: (chapter) =>
+        useEbook.getState().applyRemoteChapter(chapter),
+      onChapterDelete: (id) => useEbook.getState().applyRemoteChapterDelete(id),
+      onEbookUpdate: (remote) => useEbook.getState().applyRemoteEbook(remote),
+      onPeersChange: (peers) => useEbook.getState().setPeers(peers),
+    });
+
+    // Publicar la fase del agente para que los demás sepan si pueden escribir.
+    // Zustand notifica en cada cambio de estado, así que se filtra por fase para
+    // no inundar el canal con un `track` por cada delta del streaming.
+    let lastPhase = store.phase;
+    const unsubscribe = useEbook.subscribe((state) => {
+      if (state.phase === lastPhase) return;
+      lastPhase = state.phase;
+      publishPhase(state.phase);
+    });
+
+    return () => {
+      unsubscribe();
+      void leaveEbookChannel();
+    };
+  }, [ebookId]);
+
   return (
     <div className="flex h-dvh overflow-hidden">
       <div className="flex w-[400px] shrink-0 flex-col border-r border-border">
@@ -29,7 +63,8 @@ export function Workspace({ ebookId }: { ebookId: string }) {
             <span className="text-sm font-semibold">Nébula</span>
           </Link>
 
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <PeerBadges />
             <ExportMenu />
           </div>
         </header>

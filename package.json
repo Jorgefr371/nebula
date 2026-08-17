@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "check:epub": "tsx scripts/check-epub.mts",
-    "check:provider": "tsx scripts/check-provider.mts"
+    "check:provider": "tsx scripts/check-provider.mts",
+    "check:realtime": "tsx scripts/check-realtime.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.117.1",
