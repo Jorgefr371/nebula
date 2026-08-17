@@ -289,27 +289,38 @@
     margin: 18mm 16mm;
   }
 
+  html,
   body {
     background: #fff !important;
     color: #111 !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
-  /* Todo lo que no sea el libro desaparece: sidebar, chat, pestañas, botones. */
-  body :not(.ebook-print-root):not(.ebook-print-root *) {
+  /* Se oculta solo lo marcado explícitamente, y el libro se queda en el FLUJO
+     normal del documento.
+     Dos intentos previos fallaron por no hacerlo así:
+       · `display:none` sobre "todo lo que no sea el libro" ocultaba también sus
+         ancestros, y con ellos el propio libro: hoja en blanco.
+       · Sacarlo del flujo con position:absolute hace que no aporte altura al
+         documento, y el navegador pagina un elemento flotante de forma poco
+         fiable: una sola página.
+     Marcar y dejar fluir evita las dos trampas. */
+  .print-hide {
     display: none !important;
   }
 
-  .ebook-print-root,
-  .ebook-print-root * {
-    visibility: visible;
-  }
-
+  /* Los contenedores del shell restringen altura y recortan el scroll. En papel
+     no hay viewport: todo tiene que poder crecer. */
+  .print-shell,
+  .print-flow,
   .ebook-print-root {
-    position: absolute;
-    inset: 0;
     display: block !important;
-    overflow: visible !important;
     height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    width: auto !important;
+    flex: none !important;
   }
 
   .ebook-page {

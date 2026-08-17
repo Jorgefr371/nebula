@@ -69,7 +69,9 @@ export function EbookPreview() {
     : chapters;
 
   return (
-    <div className="h-full overflow-y-auto bg-background scrollbar-thin">
+    // print-flow: al imprimir, este contenedor con scroll propio tiene que
+    // soltar su altura, o el PDF sale recortado a la altura de la pantalla.
+    <div className="print-flow h-full overflow-y-auto bg-background scrollbar-thin">
       <div className="ebook-page">
         {selectedChapterId === null && ebook ? (
           <header className="ebook-titlepage">
