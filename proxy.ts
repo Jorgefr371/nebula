@@ -19,7 +19,10 @@ import { describeEnv, readSupabaseEnv } from "@/lib/env";
  * "creo que" puede fallar no sirve: la primera vez fallaba justo en el punto que
  * había dejado fuera.
  */
-const PUBLIC_PATHS = ["/login", "/auth"];
+// /api/version es público a propósito: sirve para comprobar QUÉ hay desplegado,
+// y si exigiera sesión no se podría usar justo cuando más falta hace —cuando algo
+// no funciona. No expone nada sensible.
+const PUBLIC_PATHS = ["/login", "/auth", "/api/version"];
 
 export async function proxy(request: NextRequest) {
   try {

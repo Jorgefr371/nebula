@@ -365,7 +365,18 @@ export async function runTool(
   input: Record<string, unknown>,
 ): Promise<ToolOutcome> {
   const executor = executors[name];
-  if (!executor) return fail(`Herramienta desconocida: ${name}`);
+  if (!executor) {
+    // Listar las que sí hay no es adorno. El servidor manda al modelo la lista
+    // de herramientas, pero quien las ejecuta es este bundle en el navegador:
+    // si la pestaña lleva abierta desde antes de un despliegue, el modelo pide
+    // una herramienta nueva que este código todavía no conoce. Ver la lista
+    // real distingue ese caso —recargar y listo— de un fallo de verdad.
+    return fail(
+      `Herramienta desconocida: ${name}. ` +
+        `Las disponibles en esta versión son: ${Object.keys(executors).join(", ")}. ` +
+        "Si falta alguna que el modelo esperaba, la pestaña está ejecutando una versión antigua: recarga la página.",
+    );
+  }
 
   try {
     return await executor(input);
