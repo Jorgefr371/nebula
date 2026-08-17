@@ -40,6 +40,7 @@ const ebook: Ebook = {
   language: "es",
   description: "Cómo cerrar clientes sin sonar a comercial.",
   cover_path: null,
+  image_style: "fotografía editorial, luz cálida, paleta tierra",
   status: "ready",
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),

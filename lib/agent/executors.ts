@@ -66,6 +66,7 @@ const executors: Record<
       "author",
       "language",
       "description",
+      "image_style",
     ] as const) {
       const value = input[key];
       if (typeof value === "string" && value.trim()) {

@@ -53,7 +53,7 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: ebook, error: ebookError } = await supabase
     .from("ebooks")
-    .select("id")
+    .select("id, image_style")
     .eq("id", ebookId)
     .single();
 
@@ -63,6 +63,20 @@ export async function POST(request: Request) {
       { status: 404 },
     );
   }
+
+  // La dirección de arte se impone AQUÍ, no se le pide al agente que la repita.
+  // Cada imagen es una llamada independiente: confiar en que se acuerde veinte
+  // turnos después es cómo un libro acaba con nueve estilos distintos.
+  const style = ebook.image_style?.trim();
+  const fullPrompt = [
+    style && `Estilo visual (aplícalo estrictamente): ${style}.`,
+    prompt,
+    // Los modelos de imagen escriben texto mal casi siempre, y una portada con
+    // letras deformes es inservible aunque el resto sea perfecto.
+    "Sin texto, letras, números ni marcas de agua en la imagen.",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   // 1. Generar.
   let base64: string;
@@ -75,7 +89,7 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         model: MODEL,
-        prompt,
+        prompt: fullPrompt,
         size: SIZES[kind],
         n: 1,
       }),

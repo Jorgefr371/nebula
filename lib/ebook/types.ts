@@ -8,8 +8,13 @@ export type Ebook = {
   author: string | null;
   language: string;
   description: string | null;
-  /** Ruta dentro del bucket `covers`, no una URL: las firmadas caducan. */
+  /** Ruta dentro del bucket `images`, no una URL: las firmadas caducan. */
   cover_path: string | null;
+  /**
+   * Dirección de arte común a todas las imágenes. El servidor la antepone a
+   * cada prompt, así la coherencia no depende de que el agente se acuerde.
+   */
+  image_style: string | null;
   status: EbookStatus;
   created_at: string;
   updated_at: string;

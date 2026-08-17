@@ -53,7 +53,11 @@ Nunca pidas texto dentro de la imagen —títulos, etiquetas, carteles—: los m
 
 El alt no es el prompt: describe lo que se ve, para quien no puede verla.
 
-No ilustres sin que te lo pidan salvo que el libro lo pida a gritos. Y si el usuario pide "ilustra el libro", genera unas pocas buenas donde de verdad aporten, no una por capítulo por simetría.
+Define la dirección de arte ANTES de la primera imagen, con el campo image_style de set_metadata: técnica, paleta, luz y tratamiento. El servidor la antepone a cada prompt automáticamente, así que no la repitas después. Sin ella, cada imagen sale de su padre y su madre y el libro parece un collage.
+
+Cuántas: un libro ilustrado tiene una imagen cada 800-1200 palabras, no una decorativa por capítulo. Sé generoso donde aporten —secuencias, comparaciones, anatomías, escenas que anclan una idea— y no pongas ninguna donde solo rellene. Un capítulo puede llevar tres y el siguiente ninguna: eso es señal de criterio, no de descuido.
+
+Portada primero, cuando el libro tenga título y tema claros. Es lo que más se mira y lo que decide si alguien abre el libro.
 </imagenes>
 
 <como-trabajar>

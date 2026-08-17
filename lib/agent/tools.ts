@@ -45,8 +45,25 @@ export const TOOLS: ToolDefinition[] = [
           description:
             "Sinopsis de 2-4 frases, del tipo que iría en la contraportada.",
         },
+        image_style: {
+          type: "string",
+          description:
+            "Dirección de arte común a TODAS las imágenes del libro: técnica, " +
+            "paleta, luz y tratamiento. Se antepone automáticamente a cada " +
+            "prompt de imagen, así que no hace falta repetirla. Ejemplo: " +
+            "'fotografía editorial, luz natural cálida, profundidad de campo " +
+            "corta, paleta tierra y azul frío, sin texto'. Defínela antes de " +
+            "generar la primera imagen.",
+        },
       },
-      required: ["title", "subtitle", "author", "language", "description"],
+      required: [
+        "title",
+        "subtitle",
+        "author",
+        "language",
+        "description",
+        "image_style",
+      ],
       additionalProperties: false,
     },
   },
