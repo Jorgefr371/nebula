@@ -39,6 +39,29 @@ export function readSupabaseEnv(): SupabaseEnv {
     );
   }
 
+  // Comprobar la FORMA de la clave, no solo que exista. Pegar la URL en la
+  // casilla de la clave es un error facilísimo de cometer —las dos casillas
+  // están juntas— e invisible: la app arranca sin quejarse y solo falla al
+  // intentar autenticar, con un "Invalid API key" que no dice de dónde sale.
+  if (publishableKey === url) {
+    throw new Error(
+      "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY contiene la URL de Supabase, no la clave. " +
+        "Están las dos pegadas en Vercel; revisa que cada valor esté en su casilla.",
+    );
+  }
+
+  const looksLikeKey =
+    publishableKey.startsWith("sb_publishable_") ||
+    publishableKey.startsWith("eyJ"); // clave anon legacy (un JWT)
+
+  if (!looksLikeKey) {
+    throw new Error(
+      "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY no tiene forma de clave de Supabase. " +
+        'Debe empezar por "sb_publishable_" (o por "eyJ" si usas la clave anon antigua). ' +
+        `Recibido algo que empieza por ${JSON.stringify(publishableKey.slice(0, 12))}.`,
+    );
+  }
+
   return { url, publishableKey };
 }
 
