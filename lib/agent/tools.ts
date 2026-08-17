@@ -218,6 +218,59 @@ export const TOOLS: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: "generate_image",
+    description:
+      "Genera una ilustración con IA y la sube al libro. Devuelve el Markdown " +
+      "ya listo para insertar con edit_chapter o write_chapter. Úsala cuando " +
+      "una imagen explique algo mejor que el texto (un esquema, una secuencia, " +
+      "una comparación) o cuando el usuario pida ilustrar el libro. Describe la " +
+      "escena con detalle: composición, estilo, luz y encuadre.",
+    strict: true,
+    input_schema: {
+      type: "object",
+      properties: {
+        prompt: {
+          type: "string",
+          description:
+            "Descripción visual detallada, en inglés o español. Di el estilo " +
+            "(fotografía editorial, ilustración plana, diagrama…), el encuadre " +
+            "y qué NO debe salir. Evita texto dentro de la imagen: los modelos " +
+            "lo escriben mal.",
+        },
+        alt: {
+          type: "string",
+          description:
+            "Texto alternativo: qué se ve, para lectores de pantalla y para " +
+            "cuando la imagen no carga. Una frase descriptiva, no el prompt.",
+        },
+      },
+      required: ["prompt", "alt"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "generate_cover",
+    description:
+      "Genera la portada del libro y la asigna directamente: no hay que " +
+      "insertarla en ningún capítulo. Formato vertical. Hazlo cuando el libro " +
+      "tenga ya título y tema claros. No pongas el título dentro de la imagen: " +
+      "se superpone al maquetar y los modelos escriben mal el texto.",
+    strict: true,
+    input_schema: {
+      type: "object",
+      properties: {
+        prompt: {
+          type: "string",
+          description:
+            "Descripción visual de la portada: sujeto, estilo, paleta y " +
+            "atmósfera. Sin texto ni letras dentro de la imagen.",
+        },
+      },
+      required: ["prompt"],
+      additionalProperties: false,
+    },
+  },
 ];
 
 export const TOOL_NAMES = TOOLS.map((tool) => tool.name);
@@ -234,4 +287,6 @@ export const TOOL_LABELS: Record<string, string> = {
   rename_chapter: "Retitulando",
   delete_chapter: "Borrando capítulo",
   move_chapter: "Reordenando",
+  generate_image: "Generando ilustración",
+  generate_cover: "Diseñando la portada",
 };

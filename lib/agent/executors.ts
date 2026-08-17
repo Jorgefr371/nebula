@@ -1,6 +1,6 @@
 "use client";
 
-import { countWords, type Chapter } from "@/lib/ebook/types";
+import { countWords, type Chapter, type Ebook } from "@/lib/ebook/types";
 import { useEbook } from "@/lib/store/ebook";
 import { createClient } from "@/lib/supabase/client";
 
@@ -288,7 +288,77 @@ const executors: Record<
     const chapters = await refreshChapters(ebookId);
     return { output: `Reordenado. Índice ahora:\n${outlineSummary(chapters)}` };
   },
+
+  async generate_image(input) {
+    const ebookId = requireEbookId();
+    if (!ebookId) return fail("No hay ningún libro cargado.");
+
+    const prompt = typeof input.prompt === "string" ? input.prompt.trim() : "";
+    const alt = typeof input.alt === "string" ? input.alt.trim() : "";
+    if (!prompt) return fail("prompt no puede estar vacío.");
+    if (!alt) return fail("alt no puede estar vacío: hace falta para accesibilidad.");
+
+    const result = await generateImage({ ebookId, prompt, kind: "illustration" });
+    if ("error" in result) return fail(result.error);
+
+    // Se devuelve el Markdown montado en vez de insertarlo aquí: dónde va la
+    // imagen dentro del capítulo es una decisión de escritura, y el agente la
+    // toma mejor con edit_chapter que una heurística nuestra.
+    return {
+      output:
+        `Imagen generada. Insértala donde corresponda con este Markdown:\n\n` +
+        `![${alt}](${result.url})`,
+    };
+  },
+
+  async generate_cover(input) {
+    const ebookId = requireEbookId();
+    if (!ebookId) return fail("No hay ningún libro cargado.");
+
+    const prompt = typeof input.prompt === "string" ? input.prompt.trim() : "";
+    if (!prompt) return fail("prompt no puede estar vacío.");
+
+    const result = await generateImage({ ebookId, prompt, kind: "cover" });
+    if ("error" in result) return fail(result.error);
+
+    // La ruta la guarda el servidor en cover_path; aquí solo se refresca el
+    // estado local para que el preview la pinte al instante.
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("ebooks")
+      .select("*")
+      .eq("id", ebookId)
+      .single();
+    if (data) useEbook.getState().applyRemoteEbook(data as Ebook);
+
+    return { output: "Portada generada y asignada al libro." };
+  },
 };
+
+/** Llama a la ruta de servidor que genera la imagen y la sube a Storage. */
+async function generateImage(options: {
+  ebookId: string;
+  prompt: string;
+  kind: "cover" | "illustration";
+}): Promise<{ url: string } | { error: string }> {
+  const response = await fetch("/api/images", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(options),
+  });
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    return {
+      error:
+        payload?.error ??
+        `La generación de imagen falló con HTTP ${response.status}.`,
+    };
+  }
+
+  return { url: payload.url as string };
+}
 
 export async function runTool(
   name: string,

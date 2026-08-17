@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { renderMarkdownSafe } from "@/lib/ebook/render";
 import { useEbook } from "@/lib/store/ebook";
+import { createClient } from "@/lib/supabase/client";
 import type { Chapter } from "@/lib/ebook/types";
 
 /**
@@ -55,6 +56,14 @@ export function EbookPreview() {
   const chapters = useEbook((state) => state.chapters);
   const selectedChapterId = useEbook((state) => state.selectedChapterId);
 
+  // `cover_path` guarda la ruta en Storage, no una URL: las firmadas caducan y
+  // el libro se rompería solo. La URL pública se compone aquí, al pintar —
+  // getPublicUrl solo concatena cadenas, así que no hace falta memoizarlo.
+  const coverUrl = ebook?.cover_path
+    ? createClient().storage.from("images").getPublicUrl(ebook.cover_path).data
+        .publicUrl
+    : null;
+
   const visible = selectedChapterId
     ? chapters.filter((chapter) => chapter.id === selectedChapterId)
     : chapters;
@@ -64,6 +73,14 @@ export function EbookPreview() {
       <div className="ebook-page">
         {selectedChapterId === null && ebook ? (
           <header className="ebook-titlepage">
+            {coverUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                className="ebook-cover"
+                src={coverUrl}
+                alt={`Portada de ${ebook.title}`}
+              />
+            ) : null}
             <h1>{ebook.title}</h1>
             {ebook.subtitle ? <p className="subtitle">{ebook.subtitle}</p> : null}
             {ebook.author ? <p className="author">{ebook.author}</p> : null}

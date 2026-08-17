@@ -45,10 +45,20 @@ export async function buildEpub(
 
   const written = chapters.filter((chapter) => chapter.content.trim());
 
+  // Las imágenes hay que EMBEBERLAS. Un EPUB es un paquete cerrado que se lee
+  // sin conexión: dejar <img src="https://…"> produce huecos en blanco en
+  // cualquier lector offline, y los validadores lo marcan como recurso remoto
+  // no declarado en el manifiesto.
+  const images = await embedImages(zip, written);
+
   // 3. Un XHTML por capítulo.
   const entries = written.map((chapter, index) => {
     const fileName = `chapter-${String(index + 1).padStart(3, "0")}.xhtml`;
-    const body = toXhtml(renderMarkdown(chapter.content));
+    let html = renderMarkdown(chapter.content);
+    for (const [remoteUrl, local] of images) {
+      html = html.split(remoteUrl).join(local.href);
+    }
+    const body = toXhtml(html);
 
     zip.file(
       `OEBPS/${fileName}`,
@@ -148,6 +158,7 @@ ${ebook.description ? `    <dc:description>${escapeXml(ebook.description)}</dc:d
     <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
     <item id="css" href="style.css" media-type="text/css"/>
     <item id="titlepage" href="title.xhtml" media-type="application/xhtml+xml"/>
+${[...images.values()].map((image) => `    <item id="${image.id}" href="${image.href}" media-type="${image.mediaType}"/>`).join("\n")}
 ${entries.map((entry) => `    <item id="${entry.id}" href="${entry.fileName}" media-type="application/xhtml+xml"/>`).join("\n")}
   </manifest>
   <spine toc="ncx">
@@ -162,6 +173,71 @@ ${entries.map((entry) => `    <itemref idref="${entry.id}"/>`).join("\n")}
     type: "blob",
     mimeType: "application/epub+zip",
   });
+}
+
+type EmbeddedImage = {
+  id: string;
+  /** Ruta relativa dentro de OEBPS, que es lo que va en el <img src>. */
+  href: string;
+  mediaType: string;
+};
+
+/**
+ * Descarga las imágenes referenciadas en los capítulos y las mete en el ZIP.
+ *
+ * Se descargan en paralelo pero los fallos NO tumban la exportación: si una
+ * imagen no responde, se deja su URL original en el HTML. Un EPUB con una
+ * imagen rota es infinitamente mejor que ningún EPUB, y el usuario está
+ * pulsando "Exportar" porque quiere su libro ahora.
+ */
+async function embedImages(
+  zip: JSZip,
+  chapters: Chapter[],
+): Promise<Map<string, EmbeddedImage>> {
+  const urls = new Set<string>();
+  for (const chapter of chapters) {
+    for (const match of chapter.content.matchAll(
+      /!\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/g,
+    )) {
+      urls.add(match[1]);
+    }
+  }
+
+  const embedded = new Map<string, EmbeddedImage>();
+
+  await Promise.all(
+    [...urls].map(async (url, index) => {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) return;
+
+        const blob = await response.blob();
+
+        // Comprobar que es DE VERDAD una imagen, no solo que la petición fue
+        // bien. Una URL rota que apunta a un dominio vivo devuelve 200 con una
+        // página HTML, y sin esto acabaría incrustada como si fuera un PNG:
+        // el EPUB queda con un recurso corrupto y un media-type inválido en el
+        // manifiesto, que es justo lo que rechaza un validador.
+        const extension = {
+          "image/png": "png",
+          "image/jpeg": "jpg",
+          "image/webp": "webp",
+        }[blob.type.split(";")[0].trim()];
+
+        if (!extension) return;
+        const mediaType = blob.type.split(";")[0].trim();
+
+        const href = `images/img-${String(index + 1).padStart(3, "0")}.${extension}`;
+        zip.file(`OEBPS/${href}`, await blob.arrayBuffer());
+
+        embedded.set(url, { id: `img${index + 1}`, href, mediaType });
+      } catch {
+        // Se deja la URL remota en el HTML; el resto del libro sale igual.
+      }
+    }),
+  );
+
+  return embedded;
 }
 
 /**
@@ -202,6 +278,16 @@ ul, ol { margin: 1em 0 1em 1.4em; text-align: left; }
 li { margin-bottom: 0.4em; }
 
 hr { border: 0; border-top: 1px solid currentColor; margin: 2em auto; width: 25%; opacity: 0.4; }
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1.6em auto;
+  /* Evita que una imagen quede partida entre dos páginas. */
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
 
 .titlepage { text-align: center; margin-top: 25%; }
 .book-title { font-size: 2.1em; margin-bottom: 0.3em; text-align: center; page-break-before: avoid; }

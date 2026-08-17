@@ -232,6 +232,26 @@
   border-top: 1px solid hsl(var(--border-strong));
 }
 
+.ebook-prose img {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 2rem 0;
+  border-radius: 0.5rem;
+  /* Una imagen partida entre dos páginas del PDF se ve fatal. */
+  break-inside: avoid;
+}
+
+.ebook-cover {
+  display: block;
+  width: 100%;
+  max-width: 22rem;
+  height: auto;
+  margin: 0 auto 2.5rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 60px -20px hsl(0 0% 0% / 0.6);
+}
+
 .ebook-prose code {
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.875em;
