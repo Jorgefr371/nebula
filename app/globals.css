@@ -1,26 +1,385 @@
 @import "tailwindcss";
 
+/**
+ * Nébula design system.
+ *
+ * Every colour is an HSL triplet in a semantic token — never a raw hex in a
+ * component. This is the same discipline we force on the apps the agent
+ * generates, so the tool and its output share one vocabulary.
+ *
+ * Dark-only by design: the product is a black canvas with violet light on it.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces, darkest to lightest */
+  --background: 0 0% 3.5%;
+  --surface: 265 18% 7%;
+  --surface-raised: 265 16% 10%;
+  --border: 265 14% 16%;
+  --border-strong: 265 20% 24%;
+
+  /* Text */
+  --foreground: 260 20% 97%;
+  --muted-foreground: 258 10% 62%;
+
+  /* Violet scale — the brand */
+  --primary: 270 91% 65%;
+  --primary-hover: 270 91% 71%;
+  --primary-foreground: 270 100% 99%;
+  --accent: 288 84% 62%;
+
+  /* Feedback */
+  --success: 152 62% 48%;
+  --warning: 38 92% 58%;
+  --destructive: 0 72% 58%;
+
+  /* Composite effects */
+  --hero-gradient: radial-gradient(
+      120% 90% at 50% -10%,
+      hsl(270 91% 52% / 0.55) 0%,
+      hsl(288 84% 42% / 0.28) 42%,
+      transparent 72%
+    ),
+    linear-gradient(180deg, hsl(265 40% 10%) 0%, hsl(var(--background)) 60%);
+  --glow-primary: 0 0 0 1px hsl(var(--primary) / 0.35),
+    0 8px 40px -8px hsl(var(--primary) / 0.45);
+
+  --radius: 0.875rem;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: hsl(var(--background));
+  --color-surface: hsl(var(--surface));
+  --color-surface-raised: hsl(var(--surface-raised));
+  --color-border: hsl(var(--border));
+  --color-border-strong: hsl(var(--border-strong));
+
+  --color-foreground: hsl(var(--foreground));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-hover: hsl(var(--primary-hover));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-accent: hsl(var(--accent));
+
+  --color-success: hsl(var(--success));
+  --color-warning: hsl(var(--warning));
+  --color-destructive: hsl(var(--destructive));
+
+  --radius-token: var(--radius);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background-color: hsl(var(--primary) / 0.35);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ---------------------------------------------------------------------------
+   El libro maquetado.
+   Estos estilos sirven a la vez para el preview en pantalla y para el PDF: la
+   exportación a PDF es la impresión del navegador sobre este mismo marcado, así
+   que lo que se ve es literalmente lo que sale. Por eso van fuera de Tailwind,
+   en CSS plano — hay que poder anularlos limpiamente en @media print.
+--------------------------------------------------------------------------- */
+.ebook-page {
+  --measure: 34rem;
+  margin: 0 auto;
+  max-width: var(--measure);
+  padding: 4rem 1.75rem 8rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: hsl(var(--foreground) / 0.92);
+}
+
+.ebook-titlepage {
+  margin-bottom: 5rem;
+  padding-bottom: 3rem;
+  border-bottom: 1px solid hsl(var(--border));
+  text-align: center;
+}
+
+.ebook-titlepage h1 {
+  font-size: 2.25rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.ebook-titlepage .subtitle {
+  margin-top: 0.75rem;
+  font-style: italic;
+  color: hsl(var(--muted-foreground));
+  text-wrap: balance;
+}
+
+.ebook-titlepage .author {
+  margin-top: 2rem;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.8125rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+
+.ebook-titlepage .description {
+  margin-top: 2rem;
+  font-size: 0.9375rem;
+  color: hsl(var(--muted-foreground));
+  text-align: left;
+}
+
+.ebook-chapter + .ebook-chapter {
+  margin-top: 5rem;
+}
+
+.ebook-chapter-title {
+  margin-bottom: 2rem;
+  font-size: 1.625rem;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.ebook-chapter-number {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: hsl(var(--primary));
+}
+
+.ebook-prose > * + * {
+  margin-top: 1.25rem;
+}
+
+/* Sangría francesa: primer párrafo sin sangrar, los siguientes sí. Es lo que
+   distingue un texto maquetado de un texto pegado. */
+.ebook-prose p + p {
+  margin-top: 0;
+  text-indent: 1.4em;
+}
+
+.ebook-prose h2,
+.ebook-prose h3 {
+  margin-top: 2.5rem;
+  font-size: 1.1875rem;
+  line-height: 1.35;
+}
+
+.ebook-prose h3 {
+  font-size: 1.0625rem;
+}
+
+.ebook-prose blockquote {
+  margin-inline: 1.25rem;
+  padding-left: 1rem;
+  border-left: 2px solid hsl(var(--primary) / 0.5);
+  font-style: italic;
+  color: hsl(var(--foreground) / 0.8);
+}
+
+.ebook-prose ul,
+.ebook-prose ol {
+  padding-left: 1.5rem;
+}
+
+.ebook-prose ul {
+  list-style: disc;
+}
+
+.ebook-prose ol {
+  list-style: decimal;
+}
+
+.ebook-prose li + li {
+  margin-top: 0.4rem;
+}
+
+.ebook-prose strong {
+  font-weight: 700;
+}
+
+.ebook-prose em {
+  font-style: italic;
+}
+
+.ebook-prose hr {
+  width: 25%;
+  margin: 2.5rem auto;
+  border: 0;
+  border-top: 1px solid hsl(var(--border-strong));
+}
+
+.ebook-prose code {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.875em;
+  background: hsl(var(--surface-raised));
+  padding: 0.1em 0.35em;
+  border-radius: 0.3em;
+}
+
+.ebook-prose pre {
+  overflow-x: auto;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: hsl(var(--surface-raised));
+  font-size: 0.8125rem;
+}
+
+.ebook-prose pre code {
+  background: none;
+  padding: 0;
+}
+
+.ebook-empty {
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+
+/* ---------------------------------------------------------------------------
+   Impresión = exportación a PDF.
+   Se invierte a tinta sobre papel y se oculta todo el cromo de la aplicación;
+   solo queda el libro. Un PDF con fondo negro gasta tóner y no se lee.
+--------------------------------------------------------------------------- */
+@media print {
+  @page {
+    size: A5;
+    margin: 18mm 16mm;
+  }
+
+  body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+
+  /* Todo lo que no sea el libro desaparece: sidebar, chat, pestañas, botones. */
+  body :not(.ebook-print-root):not(.ebook-print-root *) {
+    display: none !important;
+  }
+
+  .ebook-print-root,
+  .ebook-print-root * {
+    visibility: visible;
+  }
+
+  .ebook-print-root {
+    position: absolute;
+    inset: 0;
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .ebook-page {
+    max-width: none;
+    padding: 0;
+    color: #111;
+    font-size: 11pt;
+    line-height: 1.55;
+  }
+
+  .ebook-titlepage {
+    border-bottom: 0;
+    margin-bottom: 0;
+    padding-bottom: 0;
+    break-after: page;
+    min-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .ebook-titlepage .subtitle,
+  .ebook-titlepage .author,
+  .ebook-titlepage .description,
+  .ebook-empty {
+    color: #444;
+  }
+
+  .ebook-chapter {
+    break-before: page;
+  }
+
+  .ebook-chapter + .ebook-chapter {
+    margin-top: 0;
+  }
+
+  /* Nunca dejar un encabezado colgando al final de una página. */
+  .ebook-chapter-title,
+  .ebook-prose h2,
+  .ebook-prose h3 {
+    break-after: avoid;
+  }
+
+  .ebook-chapter-number {
+    color: #666;
+  }
+
+  .ebook-prose blockquote {
+    border-left-color: #999;
+    color: #333;
+  }
+
+  .ebook-prose code,
+  .ebook-prose pre {
+    background: #f2f2f2;
+  }
+
+  /* Viudas y huérfanas: una línea suelta al cambiar de página se ve fatal. */
+  .ebook-prose p {
+    orphans: 2;
+    widows: 2;
+  }
+}
+
+@layer utilities {
+  .bg-hero {
+    background-image: var(--hero-gradient);
+  }
+
+  .shadow-glow {
+    box-shadow: var(--glow-primary);
+  }
+
+  /* Thin dark scrollbars so the chat and file tree don't get light gutters. */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border-strong)) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border-strong));
+    border-radius: 9999px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }

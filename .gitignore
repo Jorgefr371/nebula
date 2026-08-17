@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...menos la plantilla: sin ella, quien clone el repo no sabe qué variables
+# hay que rellenar. No lleva ningún secreto, solo los nombres.
+!.env.local.example
 
 # vercel
 .vercel
