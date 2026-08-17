@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "check:epub": "tsx scripts/check-epub.mts"
+    "check:epub": "tsx scripts/check-epub.mts",
+    "check:provider": "tsx scripts/check-provider.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.117.1",
@@ -19,6 +20,7 @@
     "lucide-react": "^1.31.0",
     "marked": "^18.0.9",
     "next": "16.3.1",
+    "openai": "^7.5.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "tailwind-merge": "^3.6.0",

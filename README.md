@@ -9,13 +9,20 @@ libros son compartidos entre todos.
 ## Puesta en marcha
 
 ```bash
-cp .env.local.example .env.local   # rellena ANTHROPIC_API_KEY
+cp .env.local.example .env.local   # rellena OPENAI_API_KEY (o ANTHROPIC_API_KEY)
 npm install
 npm run dev                        # http://localhost:3100
 ```
 
-Las claves de Supabase ya vienen puestas en `.env.local`. Falta la de Anthropic,
-que solo se usa en el servidor y nunca llega al navegador.
+Las claves de Supabase ya vienen puestas. Para el modelo basta **una** de las
+dos claves: si están las dos gana OpenAI, y `MODEL_PROVIDER` fuerza una concreta.
+Solo se usan en el servidor; nunca llegan al navegador.
+
+Comprobar que el modelo responde bien, contra la API real:
+
+```bash
+npm run check:provider
+```
 
 ### Dar de alta a alguien del equipo
 
@@ -64,6 +71,29 @@ mantiene el servidor sin estado.
 | `app/globals.css` | Los estilos del libro son **también** los del PDF: exportar es imprimir este marcado. |
 | `proxy.ts` | Refresco de sesión y cierre de la app. En Next.js 16 esto ya no se llama `middleware`. |
 
+## Cambiar de modelo
+
+`lib/agent/providers/` es la costura. El formato canónico interno es el de
+bloques de contenido de Anthropic —es lo que hay guardado en Postgres y lo que
+lee la UI—, y cada proveedor traduce a lo suyo. Añadir un tercero es escribir un
+fichero que cumpla `Provider`.
+
+Diferencias entre los dos que ya están, y que se notan:
+
+| | OpenAI (`gpt-5.2`) | Anthropic (`claude-opus-5`) |
+|---|---|---|
+| Caché de prompt | Automática por prefijo desde 1024 tokens | Explícita, breakpoint en el último bloque de `system` |
+| Resultados de herramienta | Un mensaje `tool` por llamada | Todos en un único mensaje de usuario |
+| Razonamiento | Se queda en el servidor | Bloques de pensamiento, devueltos con firma |
+| Texto + herramientas | **Nunca en el mismo turno** | En el mismo turno |
+
+Esa última fila tiene consecuencia visible: con gpt-5.2 el chat **va mudo
+mientras trabaja** y solo escribe al terminar. Durante el trabajo lo único que
+ve el usuario son las líneas de actividad ("Creando la estructura",
+"Escribiendo capítulo 3"). Con Claude, el agente va comentando a la vez que
+escribe. No es un bug; conviene saberlo antes de tocar el prompt intentando
+arreglarlo.
+
 ## Tres cosas que rompen si se tocan sin querer
 
 **1. Prompt caching.** El orden de renderizado es `tools` → `system` →
@@ -92,14 +122,16 @@ borraría trabajo.
 ## Estado
 
 Funcionando y verificado:
+- El agente contra la API real: llamadas a herramientas, vuelta de resultados,
+  modo conversación y caché de prompt (`npm run check:provider`, 14/14)
 - Login por enlace mágico, con la lista blanca rechazando correos no autorizados
 - Cierre de toda la aplicación vía `proxy.ts`
 - Esquema, políticas RLS y funciones de reordenamiento (0 advertencias de seguridad)
-- Generación de EPUB válida (21/21 comprobaciones)
+- Generación de EPUB válida (`npm run check:epub`, 21/21)
 - Build de producción, typecheck y lint limpios
 
-Sin verificar end-to-end (hace falta `ANTHROPIC_API_KEY` y una sesión iniciada):
-- La escritura real de capítulos por el agente
+Sin verificar end-to-end (hace falta una sesión iniciada en el navegador):
+- El recorrido completo desde la interfaz: prompt → libro maquetado → EPUB
 - La exportación a GitHub (necesita además una OAuth App)
 
 Pendiente:

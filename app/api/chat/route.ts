@@ -1,17 +1,18 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { resolveProvider } from "@/lib/agent/providers";
 import { SYSTEM_PROMPT } from "@/lib/agent/system-prompt";
 import { TOOLS } from "@/lib/agent/tools";
+import type { ChatMessage } from "@/lib/store/types";
 
 /**
- * Streaming proxy to the Claude Messages API.
+ * Proxy de streaming hacia el modelo.
  *
- * This route is deliberately stateless: the client owns the conversation and the
- * agent loop, because the agent's tools (write a file, npm install, read the dev
- * server's logs) can only run where WebContainer lives — the browser. The server
- * exists for exactly one reason: to keep ANTHROPIC_API_KEY off the client.
+ * Esta ruta es deliberadamente sin estado: quien manda el bucle del agente es el
+ * cliente, porque las herramientas operan sobre Supabase con la sesión del
+ * usuario. El servidor existe por un único motivo: que la clave del modelo no
+ * llegue nunca al navegador.
+ *
+ * Qué proveedor se usa lo decide `resolveProvider()` según la clave presente.
  */
-
-const MODEL = "claude-opus-5";
 
 export const maxDuration = 300;
 
@@ -33,15 +34,9 @@ type ClientEvent =
   | { type: "error"; message: string };
 
 export async function POST(request: Request) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return Response.json(
-      {
-        error:
-          "Falta ANTHROPIC_API_KEY. Añádela a .env.local y reinicia el servidor.",
-      },
-      { status: 500 },
-    );
+  const provider = resolveProvider();
+  if ("error" in provider) {
+    return Response.json({ error: provider.error }, { status: 500 });
   }
 
   let body: { messages?: unknown };
@@ -59,79 +54,38 @@ export async function POST(request: Request) {
     );
   }
 
-  const client = new Anthropic({ apiKey });
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
     async start(controller) {
+      let closed = false;
       const send = (event: ClientEvent) => {
+        if (closed) return;
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
       };
 
       try {
-        const claudeStream = client.messages.stream({
-          model: MODEL,
-          max_tokens: 64000,
-          // The cache breakpoint sits on the last system block, which caches
-          // tools + system together (render order is tools → system → messages).
-          // Nothing dynamic may appear above this point.
-          system: [
-            {
-              type: "text",
-              text: SYSTEM_PROMPT,
-              cache_control: { type: "ephemeral" },
-            },
-          ],
+        const turn = await provider.run({
+          system: SYSTEM_PROMPT,
           tools: TOOLS,
-          // xhigh is the recommended level for coding and agentic work.
-          output_config: { effort: "xhigh" },
-          // Adaptive thinking defaults to omitted output; we want the summary so
-          // the UI can show what the agent is reasoning about.
-          thinking: { type: "adaptive", display: "summarized" },
-          messages: messages as Anthropic.MessageParam[],
+          messages: messages as ChatMessage[],
+          onEvent: send,
+          signal: request.signal,
         });
 
-        claudeStream.on("streamEvent", (event) => {
-          if (event.type === "content_block_start") {
-            if (event.content_block.type === "tool_use") {
-              send({ type: "tool_start", name: event.content_block.name });
-            }
-            return;
-          }
-          if (event.type === "content_block_delta") {
-            if (event.delta.type === "text_delta") {
-              send({ type: "text_delta", text: event.delta.text });
-            } else if (event.delta.type === "thinking_delta") {
-              send({ type: "thinking_delta", text: event.delta.thinking });
-            }
-          }
-        });
-
-        const message = await claudeStream.finalMessage();
-
-        // The client appends `content` verbatim. That matters: thinking blocks
-        // carry a signature the API rejects if it is modified, so the assembled
-        // blocks travel back untouched rather than being rebuilt from deltas.
+        // El cliente añade `content` literal al historial. Importa: en Anthropic
+        // los bloques de pensamiento llevan una firma que la API rechaza si se
+        // modifica, así que los bloques viajan de vuelta sin reconstruirse.
         send({
           type: "done",
-          stopReason: message.stop_reason,
-          content: message.content,
-          usage: {
-            input: message.usage.input_tokens,
-            output: message.usage.output_tokens,
-            cacheRead: message.usage.cache_read_input_tokens ?? 0,
-            cacheWrite: message.usage.cache_creation_input_tokens ?? 0,
-          },
+          stopReason: turn.stopReason,
+          content: turn.content,
+          usage: turn.usage,
         });
       } catch (error) {
-        const message =
-          error instanceof Anthropic.APIError
-            ? `${error.status ?? ""} ${error.message}`.trim()
-            : error instanceof Error
-              ? error.message
-              : "Error desconocido llamando al modelo";
-        send({ type: "error", message });
+        send({ type: "error", message: describeError(error) });
       } finally {
+        closed = true;
         controller.close();
       }
     },
@@ -144,4 +98,25 @@ export async function POST(request: Request) {
       connection: "keep-alive",
     },
   });
+}
+
+/**
+ * Los SDKs traen el detalle útil en sitios distintos. Un "500" pelado deja al
+ * usuario sin saber si le falta saldo, si el modelo no existe o si se cayó la red.
+ */
+function describeError(error: unknown): string {
+  if (error && typeof error === "object") {
+    const candidate = error as {
+      status?: number;
+      message?: string;
+      error?: { message?: string };
+    };
+    const detail = candidate.error?.message ?? candidate.message;
+    if (detail) {
+      return candidate.status ? `${candidate.status}: ${detail}` : detail;
+    }
+  }
+  return error instanceof Error
+    ? error.message
+    : "Error desconocido llamando al modelo";
 }
