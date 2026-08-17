@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { readSupabaseEnv } from "@/lib/env";
+import { describeEnv, readSupabaseEnv } from "@/lib/env";
 
 /**
  * En Next.js 16 `middleware` se renombró a `proxy` (runtime nodejs, no
@@ -11,80 +11,51 @@ import { readSupabaseEnv } from "@/lib/env";
  *     caduca y el usuario acaba deslogueado sin motivo aparente.
  *  2. Cerrar la aplicación: cualquier ruta que no sea el login redirige a él si
  *     no hay usuario. Es una herramienta interna, no hay nada público.
+ *
+ * TODO el cuerpo va dentro de un try/catch. El proxy corre en cada ruta, así que
+ * cualquier excepción aquí convierte la aplicación entera en un "Internal Server
+ * Error" mudo — Next.js oculta el detalle en producción y el mensaje se queda en
+ * unos logs a los que quizá no tengas acceso. Envolver solo los sitios donde
+ * "creo que" puede fallar no sirve: la primera vez fallaba justo en el punto que
+ * había dejado fuera.
  */
 const PUBLIC_PATHS = ["/login", "/auth"];
 
 export async function proxy(request: NextRequest) {
+  try {
+    return await handle(request);
+  } catch (error) {
+    return configError(error);
+  }
+}
+
+async function handle(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  // Si falta configuración, el proxy corre en TODAS las rutas y lanzar aquí
-  // convierte la aplicación entera en un "Internal Server Error" mudo: Next.js
-  // oculta el detalle en producción y el mensaje se queda en unos logs a los que
-  // quizá no tengas acceso. Mejor devolver un 503 que diga exactamente qué
-  // falta; no revela ningún secreto, solo nombres de variables.
-  let env;
-  try {
-    env = readSupabaseEnv();
-  } catch (error) {
-    return new NextResponse(
-      `Nébula no está configurada.\n\n${error instanceof Error ? error.message : String(error)}`,
-      {
-        status: 503,
-        headers: {
-          "content-type": "text/plain; charset=utf-8",
-          "cache-control": "no-store",
-        },
-      },
-    );
-  }
+  const env = readSupabaseEnv();
 
-  const supabase = createServerClient(
-    env.url,
-    env.publishableKey,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          for (const { name, value } of cookiesToSet) {
-            request.cookies.set(name, value);
-          }
-          response = NextResponse.next({ request });
-          for (const { name, value, options } of cookiesToSet) {
-            response.cookies.set(name, value, options);
-          }
-        },
+  const supabase = createServerClient(env.url, env.publishableKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        for (const { name, value } of cookiesToSet) {
+          request.cookies.set(name, value);
+        }
+        response = NextResponse.next({ request });
+        for (const { name, value, options } of cookiesToSet) {
+          response.cookies.set(name, value, options);
+        }
       },
     },
-  );
+  });
 
   // getUser() revalida el token contra el servidor de Supabase. getSession() no
   // lo hace: se fía de la cookie, que el cliente puede manipular.
-  //
-  // Se envuelve porque aquí se hace una llamada de red: una URL con una errata,
-  // un proyecto pausado o una caída de Supabase lanzarían, y al correr el proxy
-  // en todas las rutas eso tumba la aplicación entera con un 500 sin explicación.
-  let user = null;
-  try {
-    ({
-      data: { user },
-    } = await supabase.auth.getUser());
-  } catch (error) {
-    return new NextResponse(
-      "No se pudo contactar con Supabase.\n\n" +
-        `${error instanceof Error ? error.message : String(error)}\n\n` +
-        `URL configurada: ${env.url}\n` +
-        "Revisa que sea correcta y que el proyecto no esté pausado.",
-      {
-        status: 503,
-        headers: {
-          "content-type": "text/plain; charset=utf-8",
-          "cache-control": "no-store",
-        },
-      },
-    );
-  }
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
   const isPublic = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
@@ -104,6 +75,39 @@ export async function proxy(request: NextRequest) {
   }
 
   return response;
+}
+
+/**
+ * Página de diagnóstico. Dice qué variables ve el servidor y en qué estado,
+ * nunca sus valores: los nombres y las longitudes bastan para encontrar una
+ * errata o un valor mal pegado, y no filtran ningún secreto.
+ */
+function configError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  return new NextResponse(
+    [
+      "Nébula no está configurada correctamente.",
+      "",
+      message,
+      "",
+      "─".repeat(60),
+      "Variables que ve el servidor:",
+      "",
+      describeEnv(),
+      "",
+      "─".repeat(60),
+      "Recuerda: las NEXT_PUBLIC_* se incrustan al CONSTRUIR.",
+      "Añadirlas en Vercel no basta — hay que volver a desplegar.",
+    ].join("\n"),
+    {
+      status: 503,
+      headers: {
+        "content-type": "text/plain; charset=utf-8",
+        "cache-control": "no-store",
+      },
+    },
+  );
 }
 
 export const config = {
