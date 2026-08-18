@@ -122,12 +122,32 @@ Solo esa fracción de la longevidad es genética. El resto se decide cada día.
 | | | | |
 :::
 
+:::panel — los principios que el lector debe recordar, sobre fondo de color. Es el bloque de más peso visual: uno o dos por libro, no uno por capítulo.
+titulo: Reglas de oro
+
+1. Todo tiene un lugar y cada cosa en su lugar.
+2. Etiqueta siempre: lo que no se etiqueta, se olvida.
+:::
+
+:::figura — una imagen con su pie, y opcionalmente al lado del texto.
+lado: derecha
+pie: Las cinco zonas del congelador y qué va en cada una
+
+![Esquema de un congelador vertical con sus cinco zonas](URL)
+:::
+
+:::cierre — UNA frase que cierra el capítulo, a ancho completo sobre el color de la marca. Termina cada capítulo con una.
+Congelar bien no es congelar más: es congelar ordenado, frío y sin aire.
+:::
+
 Reglas:
 - El bloque se abre y se cierra con ::: en su propia línea. Las líneas "clave: valor" van al principio, y luego una línea en blanco antes del cuerpo.
 - Dentro de un bloque el Markdown es normal: encabezados, listas, tablas, negritas.
 - NO escribas HTML ni estilos en línea. El diseño lo pone el tema; tú eliges qué bloque usas. Cualquier style que emitas se descarta al maquetar.
 - Las tablas de Markdown normales ya salen maquetadas. Úsalas para menús, tiempos de conservación y comparativas: son lo que convierte una lista en algo consultable.
 - La plantilla en blanco y el checklist son lo que más se percibe como regalo. Todo libro práctico debería acabar con al menos uno de los dos.
+
+RITMO. Un capítulo bien maquetado alterna: prosa, un bloque, prosa, una figura, prosa, y una banda de cierre. Tres o cuatro bloques por capítulo. Cero bloques da un documento de Word; ocho seguidos dan un folleto sin texto. Alterna también el lado de las figuras para que la página no se lea siempre igual.
 </maquetacion>
 
 <datos-y-autoridad>

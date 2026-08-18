@@ -220,6 +220,171 @@ ${s}thead th {
   color: var(--book-accent);
   border-bottom: 2px solid var(--book-accent);
 }
+
+/* --- Apertura de capítulo --------------------------------------------- */
+
+/* El numeral en círculo, el título y el filete. Es lo primero que ve el lector
+   al pasar de página y lo que hace que un capítulo se lea como una unidad y no
+   como un párrafo más largo. Antes había una versalita gris y nada más. */
+
+${s}.ebook-chapter-title {
+  margin-bottom: 1.6em;
+  padding-bottom: 0.9em;
+  border-bottom: 3px solid var(--book-accent);
+}
+
+${s}.ebook-chapter-number {
+  display: inline-grid;
+  place-items: center;
+  width: 2.1em;
+  height: 2.1em;
+  margin-bottom: 0.55em;
+  border-radius: 50%;
+  background: var(--book-accent);
+  color: var(--book-paper);
+  font-family: var(--book-display);
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* --- Panel macizo ------------------------------------------------------ */
+
+${s}.ebook-panel {
+  padding: 1.5em 1.6em;
+  background: var(--book-accent);
+  color: var(--book-paper);
+  border-radius: 8px;
+}
+
+${s}.ebook-panel .ebook-block-title {
+  font-size: 1.15em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+${s}.ebook-panel ol,
+${s}.ebook-panel ul {
+  margin: 0.8em 0 0;
+  padding-left: 1.3em;
+}
+
+${s}.ebook-panel li::marker {
+  color: var(--book-paper);
+  font-weight: 700;
+}
+
+${s}.ebook-panel a { color: inherit; }
+
+/* --- Banda de cierre --------------------------------------------------- */
+
+/* Una sola frase a ancho completo. Cierra el capítulo y da ritmo: sin ella
+   todos los capítulos terminan igual, en un párrafo que se acaba. */
+${s}.ebook-cierre {
+  margin: 2.4em 0 0;
+  padding: 1.15em 1.5em;
+  background: var(--book-accent);
+  color: var(--book-paper);
+  border-radius: 8px;
+  text-align: center;
+  font-family: var(--book-display);
+  font-size: 1.02em;
+  font-style: italic;
+  line-height: 1.45;
+}
+
+${s}.ebook-cierre p { text-indent: 0; margin: 0; }
+
+/* --- Figura con posición ----------------------------------------------- */
+
+${s}.ebook-figura {
+  margin: 1.6em 0;
+  padding: 0;
+  background: transparent;
+}
+
+${s}.ebook-figura img {
+  width: 100%;
+  margin: 0;
+  border-radius: 10px;
+}
+
+${s}.ebook-pie {
+  margin-top: 0.55em;
+  font-size: 0.8em;
+  line-height: 1.4;
+  opacity: 0.72;
+}
+
+/* El texto rodea la figura. Es lo que rompe la columna única y hace que una
+   página parezca maquetada en vez de volcada. Los flotantes se comportan bien
+   al imprimir; una rejilla de dos columnas, no. */
+${s}.ebook-figura-derecha,
+${s}.ebook-figura-izquierda {
+  width: 42%;
+  margin-top: 0.4em;
+}
+
+${s}.ebook-figura-derecha {
+  float: right;
+  margin-left: 1.6em;
+}
+
+${s}.ebook-figura-izquierda {
+  float: left;
+  margin-right: 1.6em;
+}
+
+/* Ningún bloque puede quedar partido por un flotante que venga de arriba. */
+${s}.ebook-block:not(.ebook-figura),
+${s}h2,
+${s}h3 {
+  clear: both;
+}
+
+/* --- Listas numeradas con distintivo ----------------------------------- */
+
+/* El numeral en color y el encabezado del punto en el acento. Convierte una
+   enumeración en algo que se escanea sin leer. */
+${s}.ebook-prose ol > li::marker,
+${s}.ebook-block-body ol > li::marker {
+  color: var(--book-accent);
+  font-family: var(--book-display);
+  font-weight: 800;
+}
+
+${s}li > strong:first-child {
+  color: var(--book-accent);
+  letter-spacing: 0.02em;
+}
+
+/* Dentro del panel el acento ES el fondo, así que el numeral y el encabezado
+   en color de acento quedan invisibles. Va DESPUÉS de las reglas generales y
+   con la misma especificidad o mayor, porque el orden es lo que decide.
+   Se detectó consultando el color calculado, no a ojo: sobre verde, un
+   numeral verde no se ve pero tampoco parece un error, simplemente falta. */
+${s}.ebook-panel .ebook-block-body ol > li::marker,
+${s}.ebook-panel .ebook-block-body ul > li::marker {
+  color: var(--book-paper);
+}
+
+${s}.ebook-panel li > strong:first-child {
+  color: var(--book-paper);
+}
+
+/* --- Ritmo vertical ---------------------------------------------------- */
+
+/* Los bloques necesitan más aire que los párrafos: pegados unos a otros se
+   leen como una sola mancha gris, que es exactamente lo que separa una página
+   maquetada de un documento volcado. */
+${s}.ebook-block + .ebook-block { margin-top: 2.2em; }
+${s}.ebook-prose > h2 { margin-top: 2em; }
+${s}.ebook-prose > h3 { margin-top: 1.5em; }
+
+${s}img {
+  border-radius: 10px;
+}
 `;
 }
 

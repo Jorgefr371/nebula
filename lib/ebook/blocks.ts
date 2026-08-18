@@ -43,6 +43,16 @@ const VARIANTS = {
   pasos: { tag: "section", label: null },
   checklist: { tag: "section", label: null },
   plantilla: { tag: "section", label: null },
+  // Panel macizo: fondo de color y texto invertido. Es el peso visual que
+  // ancla una página, y lo que en los ebooks bien maquetados lleva las reglas
+  // de oro o los principios que el lector debe recordar.
+  panel: { tag: "section", label: null },
+  // Banda de cierre de capítulo: una sola frase, a ancho completo, sobre el
+  // color de la marca. Cierra la unidad y da ritmo entre capítulos.
+  cierre: { tag: "aside", label: null },
+  // Figura con posición: permite texto a un lado e imagen al otro, que es lo
+  // que rompe la monotonía de la columna única.
+  figura: { tag: "figure", label: null },
 } as const;
 
 export type BlockVariant = keyof typeof VARIANTS;
@@ -81,6 +91,8 @@ const META_KEYS = new Set([
   "cifra",
   "fuente",
   "nota",
+  "lado",
+  "pie",
 ]);
 
 /**
@@ -206,10 +218,22 @@ export const ebookBlockExtension: TokenizerAndRendererExtension = {
     const preset = VARIANTS[block.variant];
     const inner = this.parser.parse(block.tokens);
 
+    // La figura lateral necesita una clase extra: el lado no es contenido, es
+    // maquetación, y va en el atributo para que lo resuelva la hoja de estilos.
+    const lado =
+      block.variant === "figura" && /^(izquierda|derecha)$/.test(block.meta.lado ?? "")
+        ? ` ebook-figura-${block.meta.lado}`
+        : "";
+
+    const pie = block.meta.pie
+      ? `<figcaption class="ebook-pie">${escapeHtml(block.meta.pie)}</figcaption>`
+      : "";
+
     return (
-      `<${preset.tag} class="ebook-block ebook-${block.variant}">` +
+      `<${preset.tag} class="ebook-block ebook-${block.variant}${lado}">` +
       renderHead(block.variant, block.meta) +
       `<div class="ebook-block-body">${inner}</div>` +
+      pie +
       renderFoot(block.variant, block.meta) +
       `</${preset.tag}>`
     );
