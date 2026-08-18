@@ -2,6 +2,7 @@
 
 import { auditBook, formatAudit } from "@/lib/ebook/audit";
 import { composeCover } from "@/lib/cover/compose";
+import { IMAGE_ROLES, isImageRole } from "@/lib/images/roles";
 import { THEMES } from "@/lib/ebook/themes";
 import { downloadBlob, slugify } from "@/lib/export/epub";
 import { countWords, type Chapter, type Ebook } from "@/lib/ebook/types";
@@ -314,7 +315,19 @@ const executors: Record<
     if (!prompt) return fail("prompt no puede estar vacío.");
     if (!alt) return fail("alt no puede estar vacío: hace falta para accesibilidad.");
 
-    const result = await generateImage({ ebookId, prompt, kind: "illustration" });
+    const rol = typeof input.rol === "string" ? input.rol.trim() : "";
+    if (!isImageRole(rol)) {
+      return fail(
+        `rol tiene que ser uno de: ${IMAGE_ROLES.join(", ")}. Llegó "${rol}".`,
+      );
+    }
+
+    const result = await generateImage({
+      ebookId,
+      prompt,
+      kind: "illustration",
+      role: rol,
+    });
     if ("error" in result) return fail(result.error);
 
     // Se devuelve el Markdown montado en vez de insertarlo aquí: dónde va la
@@ -383,6 +396,7 @@ const executors: Record<
         title: String(input.title ?? ""),
         highlight: String(input.highlight ?? ""),
         script: String(input.script ?? ""),
+        promise: String(input.promise ?? ""),
         ribbon: strings(input.ribbon),
         benefits: strings(input.benefits),
         badgeNumber: String(input.badge_number ?? ""),
@@ -430,6 +444,7 @@ async function generateImage(options: {
   ebookId: string;
   prompt: string;
   kind: "cover" | "illustration";
+  role?: string;
 }): Promise<{ url: string } | { error: string }> {
   const response = await fetch("/api/images", {
     method: "POST",

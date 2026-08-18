@@ -52,6 +52,14 @@ export type CoverSpec = {
   script: string;
   /** Palabras de la cinta; se pintan separadas por puntos. */
   ribbon: string[];
+  /**
+   * La promesa de resultado, sobre el panel inferior.
+   *
+   * La llevan las siete portadas de referencia sin excepción, y es lo único
+   * que distingue una portada que vende de una que solo nombra el tema: dice
+   * qué consigue el lector, no de qué va el libro.
+   */
+  promise: string;
   /** Beneficios del panel inferior. Máximo cinco: a partir de ahí no se leen. */
   benefits: string[];
   /** Cifra del sello ("68") y su etiqueta ("recetas"). Opcional. */
@@ -141,6 +149,7 @@ export type CoverLayout = {
   /** Bloques del tercio superior, en orden de pintado. */
   blocks: { block: TextBlock; y: number }[];
   ribbon: { y: number; height: number; text: string } | null;
+  promise: { y: number; height: number; text: string } | null;
   panel: { y: number; height: number } | null;
   /** Altura total ocupada por el texto superior. Sirve para el degradado. */
   textBottom: number;
@@ -148,6 +157,8 @@ export type CoverLayout = {
 
 const PANEL_HEIGHT = 210;
 const RIBBON_HEIGHT = 62;
+/** Altura reservada sobre el panel para la promesa, cuando la hay. */
+const PROMISE_HEIGHT = 96;
 
 /**
  * Coloca los elementos. Puro: no toca el canvas, solo decide coordenadas.
@@ -228,14 +239,20 @@ export function layoutCover(
 
   const hasPanel = spec.benefits.length > 0 || spec.badgeNumber.trim() !== "";
   const panelY = height - MARGIN - PANEL_HEIGHT;
+  const hasPromise = spec.promise.trim() !== "";
+  const promiseY = (hasPanel ? panelY : height - MARGIN) - PROMISE_HEIGHT - 18;
 
   const ribbonText = spec.ribbon
     .map((word) => word.trim().toUpperCase())
     .filter(Boolean)
     .join("   ·   ");
 
-  // Techo del bloque superior: no puede invadir la cinta ni el panel.
-  const floor = hasPanel ? panelY - 40 : height - MARGIN;
+  // Techo del bloque superior: no puede invadir la promesa, la cinta ni el panel.
+  const floor = hasPromise
+    ? promiseY - 24
+    : hasPanel
+      ? panelY - 40
+      : height - MARGIN;
   const reserved = ribbonText ? RIBBON_HEIGHT + 40 : 0;
   const available = floor - MARGIN * 2 - reserved;
 
@@ -261,6 +278,9 @@ export function layoutCover(
     blocks: placed,
     ribbon: ribbonText
       ? { y: cursor + 34, height: RIBBON_HEIGHT, text: ribbonText }
+      : null,
+    promise: hasPromise
+      ? { y: promiseY, height: PROMISE_HEIGHT, text: spec.promise.trim() }
       : null,
     panel: hasPanel ? { y: panelY, height: PANEL_HEIGHT } : null,
     textBottom: cursor + (ribbonText ? 34 + RIBBON_HEIGHT : 0),
@@ -388,6 +408,24 @@ export async function composeCover(
       layout.ribbon.y + layout.ribbon.height / 2 + size * 0.36,
     );
     ctx.letterSpacing = "0em";
+    ctx.textAlign = "left";
+  }
+
+  if (layout.promise) {
+    const { y, height, text } = layout.promise;
+    const size = fitFontSize(canvasMeasure(ctx), text, CONTENT_WIDTH * 0.62, {
+      max: 34,
+      min: 15,
+      font: UI,
+    });
+    ctx.font = `600 ${size}px ${UI}`;
+    const lines = wrapLines(canvasMeasure(ctx), text, CONTENT_WIDTH * 0.92, size, UI);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.textAlign = "center";
+    const start = y + height / 2 - ((lines.length - 1) * size * 1.32) / 2;
+    lines.forEach((line, i) =>
+      ctx.fillText(line, COVER_WIDTH / 2, start + i * size * 1.32),
+    );
     ctx.textAlign = "left";
   }
 

@@ -102,6 +102,7 @@ const referencia: CoverSpec = {
   highlight: "Saludables",
   script: "para Congelar",
   ribbon: ["Organiza", "Prepara", "Congela", "Disfruta"],
+  promise: "Cocina una vez y resuelve la semana completa en minutos",
   benefits: [
     "Recetas nutritivas",
     "Ideales para congelar",
@@ -115,6 +116,7 @@ const referencia: CoverSpec = {
 };
 
 const layout = layoutCover(referencia, measure);
+const minimaSinPromesa = layoutCover({ ...referencia, promise: "" }, measure);
 
 check("coloca todos los bloques de texto", layout.blocks.length >= 4);
 check("dibuja la cinta", layout.ribbon !== null);
@@ -127,6 +129,11 @@ check(
   `último texto en y=${Math.round(ultimo.y)}, panel en y=${layout.panel?.y}`,
 );
 check(
+  "el texto tampoco invade la promesa",
+  layout.promise !== null && ultimo.y < layout.promise.y,
+  `último texto en y=${Math.round(ultimo.y)}, promesa en y=${layout.promise?.y}`,
+);
+check(
   "la cinta queda por encima del panel",
   layout.ribbon !== null &&
     layout.panel !== null &&
@@ -136,6 +143,17 @@ check(
   "el panel cabe dentro de la portada",
   layout.panel !== null && layout.panel.y + layout.panel.height <= COVER_HEIGHT,
 );
+check("dibuja la promesa de resultado", layout.promise !== null);
+check(
+  "la promesa queda entre la cinta y el panel",
+  layout.promise !== null &&
+    layout.ribbon !== null &&
+    layout.panel !== null &&
+    layout.ribbon.y + layout.ribbon.height <= layout.promise.y &&
+    layout.promise.y + layout.promise.height <= layout.panel.y,
+  `cinta ${layout.ribbon?.y}+${layout.ribbon?.height}, promesa ${layout.promise?.y}, panel ${layout.panel?.y}`,
+);
+check("sin promesa no se reserva su hueco", minimaSinPromesa.promise === null);
 check(
   "título y destacado comparten cuerpo",
   new Set(
@@ -182,6 +200,7 @@ const minima = layoutCover(
     highlight: "",
     script: "",
     ribbon: [],
+    promise: "",
     benefits: [],
     badgeNumber: "",
     badgeLabel: "",

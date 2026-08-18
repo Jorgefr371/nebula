@@ -1,3 +1,4 @@
+import { buildImagePrompt, isImageRole } from "@/lib/images/roles";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -16,14 +17,14 @@ export const maxDuration = 300;
 type Body = {
   ebookId?: string;
   prompt?: string;
-  /** "cover" usa formato vertical de portada; "illustration" va apaisado. */
+  /** "cover" usa formato vertical de portada; "illustration" lo decide el papel. */
   kind?: "cover" | "illustration";
+  /** Papel de la ilustración: qué trabajo tiene que hacer. Ver lib/images/roles.ts. */
+  role?: string;
 };
 
-const SIZES = {
-  cover: "1024x1536",
-  illustration: "1536x1024",
-} as const;
+/** La portada siempre es vertical. El resto de tamaños los fija el papel. */
+const COVER_SIZE = "1024x1536";
 
 export async function POST(request: Request) {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: ebook, error: ebookError } = await supabase
     .from("ebooks")
-    .select("id, image_style")
+    .select("id, image_style, theme")
     .eq("id", ebookId)
     .single();
 
@@ -64,19 +65,42 @@ export async function POST(request: Request) {
     );
   }
 
-  // La dirección de arte se impone AQUÍ, no se le pide al agente que la repita.
-  // Cada imagen es una llamada independiente: confiar en que se acuerde veinte
-  // turnos después es cómo un libro acaba con nueve estilos distintos.
-  const style = ebook.image_style?.trim();
-  const fullPrompt = [
-    style && `Estilo visual (aplícalo estrictamente): ${style}.`,
-    prompt,
-    // Los modelos de imagen escriben texto mal casi siempre, y una portada con
-    // letras deformes es inservible aunque el resto sea perfecto.
-    "Sin texto, letras, números ni marcas de agua en la imagen.",
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+  // El prompt se monta AQUÍ, no se le pide al agente que lo recuerde. Cada
+  // imagen es una llamada independiente: confiar en que se acuerde del estilo
+  // veinte turnos después es cómo un libro acaba con nueve registros distintos.
+  //
+  // Para las ilustraciones, el papel decide la técnica y la paleta sale del
+  // tema del libro. Sin eso, "ilustra el capítulo" devuelve siempre una foto de
+  // archivo: bonita, intercambiable y que no explica nada.
+  let fullPrompt: string;
+  let size: string;
+
+  if (kind === "cover") {
+    const style = ebook.image_style?.trim();
+    fullPrompt = [
+      style && `Estilo visual (aplícalo estrictamente): ${style}.`,
+      prompt,
+      // El texto de la portada se compone después con tipografía real, en
+      // compose_cover. Aquí solo hace falta el fondo.
+      "Composición pensada como FONDO de portada: el tercio superior y la franja " +
+        "inferior deben quedar despejados, porque encima irá el título y una " +
+        "banda de beneficios.",
+      "Sin texto, letras, números ni marcas de agua en la imagen.",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    size = COVER_SIZE;
+  } else {
+    const role = isImageRole(body.role) ? body.role : "escena";
+    const built = buildImagePrompt({
+      role,
+      prompt,
+      themeId: ebook.theme,
+      imageStyle: ebook.image_style,
+    });
+    fullPrompt = built.prompt;
+    size = built.size;
+  }
 
   // 1. Generar.
   let base64: string;
@@ -90,7 +114,7 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         model: MODEL,
         prompt: fullPrompt,
-        size: SIZES[kind],
+        size,
         n: 1,
       }),
       signal: request.signal,

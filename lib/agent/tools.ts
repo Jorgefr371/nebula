@@ -250,22 +250,36 @@ export const TOOLS: ToolDefinition[] = [
   {
     name: "generate_image",
     description:
-      "Genera una ilustración con IA y la sube al libro. Devuelve el Markdown " +
-      "ya listo para insertar con edit_chapter o write_chapter. Úsala cuando " +
-      "una imagen explique algo mejor que el texto (un esquema, una secuencia, " +
-      "una comparación) o cuando el usuario pida ilustrar el libro. Describe la " +
-      "escena con detalle: composición, estilo, luz y encuadre.",
+      "Genera una ilustración y la sube al libro. Devuelve el Markdown listo " +
+      "para insertar. Antes de llamarla, decide QUÉ TRABAJO hace la imagen: ese " +
+      "es el parámetro rol, y es el que decide la técnica. Una imagen que solo " +
+      "repite en foto lo que dice el texto no aporta nada y engorda el fichero.",
     strict: true,
     input_schema: {
       type: "object",
       properties: {
+        rol: {
+          type: "string",
+          description:
+            "Qué trabajo hace la imagen. El servidor monta la técnica, el " +
+            "encuadre y la paleta a partir de esto, así que no describas el " +
+            "estilo en el prompt. Valores: " +
+            "diagrama (cómo se relacionan las partes de un sistema); " +
+            "secuencia (un proceso en tres pasos, de izquierda a derecha — el " +
+            "más útil, porque una secuencia en prosa obliga a reconstruirla); " +
+            "comparacion (dos opciones enfrentadas, antes y después); " +
+            "anatomia (las partes de una cosa, con hueco para rotularlas); " +
+            "escena (fotografía que ancla el capítulo en una situación — úsalo " +
+            "poco: es el que degenera en foto de archivo); " +
+            "seccion (portadilla que abre una parte, con el centro despejado).",
+        },
         prompt: {
           type: "string",
           description:
-            "Descripción visual detallada, en inglés o español. Di el estilo " +
-            "(fotografía editorial, ilustración plana, diagrama…), el encuadre " +
-            "y qué NO debe salir. Evita texto dentro de la imagen: los modelos " +
-            "lo escriben mal.",
+            "QUÉ se ve, no cómo está hecho. Los elementos concretos y su " +
+            "relación: 'un perro ante una puerta entreabierta; la misma puerta " +
+            "con una barrera de seguridad; una persona entrando con las manos " +
+            "ocupadas'. Nada de técnica, estilo, luz ni paleta: eso lo pone el rol.",
         },
         alt: {
           type: "string",
@@ -274,7 +288,7 @@ export const TOOLS: ToolDefinition[] = [
             "cuando la imagen no carga. Una frase descriptiva, no el prompt.",
         },
       },
-      required: ["prompt", "alt"],
+      required: ["rol", "prompt", "alt"],
       additionalProperties: false,
     },
   },
@@ -360,6 +374,16 @@ export const TOOLS: ToolDefinition[] = [
             "['ORGANIZA','PREPARA','CONGELA','DISFRUTA']. Vacío si no hay.",
           items: { type: "string" },
         },
+        promise: {
+          type: "string",
+          description:
+            "La promesa de RESULTADO, en una o dos líneas: qué consigue quien " +
+            "lo compre. Va sobre el panel inferior. Todas las portadas que " +
+            "venden la llevan — 'para desbloquear ideas infinitas de contenido " +
+            "que te ayuden a viralizar tu negocio y vender más', 'alcanzar el " +
+            "éxito en tus redes sociales en 30 días'. Di el resultado y, si lo " +
+            "hay, el plazo. No el tema. Vacío si no aplica.",
+        },
         benefits: {
           type: "array",
           description:
@@ -391,6 +415,7 @@ export const TOOLS: ToolDefinition[] = [
         "highlight",
         "script",
         "ribbon",
+        "promise",
         "benefits",
         "badge_number",
         "badge_label",

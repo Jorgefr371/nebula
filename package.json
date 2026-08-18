@@ -12,7 +12,8 @@
     "check:realtime": "tsx scripts/check-realtime.mts",
     "check:audit": "tsx scripts/check-audit.mts",
     "check:cover": "tsx scripts/check-cover.mts",
-    "check:layout": "tsx scripts/check-layout.mts"
+    "check:layout": "tsx scripts/check-layout.mts",
+    "check:images": "tsx scripts/check-images.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.117.1",
