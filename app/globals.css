@@ -296,9 +296,15 @@
    solo queda el libro. Un PDF con fondo negro gasta tóner y no se lee.
 --------------------------------------------------------------------------- */
 @media print {
+  /* Margen CERO a propósito, y el margen real lo pone .ebook-page.
+     Con un margen de página distinto de cero, Chrome se reserva ese espacio
+     para SU cabecera y SU pie, y estampa la fecha, el título de la pestaña y
+     la URL en todas las páginas. En un PDF que se vende eso es descalificante:
+     el comprador recibe 67 páginas con la dirección interna de la herramienta
+     impresa encima. Con margin: 0 no hay hueco donde dibujarlos. */
   @page {
     size: A5;
-    margin: 18mm 16mm;
+    margin: 0;
   }
 
   html,
@@ -337,7 +343,8 @@
 
   .ebook-page {
     max-width: none;
-    padding: 0;
+    /* El margen del libro, ahora que @page no pone ninguno. */
+    padding: 18mm 16mm;
     background: transparent;
     font-size: 11pt;
     line-height: 1.55;

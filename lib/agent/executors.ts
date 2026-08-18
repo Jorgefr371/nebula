@@ -8,7 +8,7 @@ import {
   type CreativeLayout,
 } from "@/lib/cover/creative";
 import { IMAGE_ROLES, isImageRole } from "@/lib/images/roles";
-import { THEMES } from "@/lib/ebook/themes";
+import { getTheme, THEMES } from "@/lib/ebook/themes";
 import { downloadBlob, slugify } from "@/lib/export/epub";
 import { countWords, type Chapter, type Ebook } from "@/lib/ebook/types";
 import { useEbook } from "@/lib/store/ebook";
@@ -327,6 +327,24 @@ const executors: Record<
       );
     }
 
+    const titular = typeof input.titular === "string" ? input.titular.trim() : "";
+
+    // Los roles que abren una sección NO pueden salir mudos. Antes se podía, y
+    // el resultado medido fue un ebook de 67 páginas con cinco fotos sin una
+    // sola palabra encima: un perro, y ya. Se falla aquí en vez de dejar pasar
+    // la imagen vacía, porque el fallo silencioso solo se descubre al abrir el
+    // PDF terminado.
+    const EXIGEN_TITULAR = ["escena", "seccion", "comparacion"];
+    if (EXIGEN_TITULAR.includes(rol) && !titular) {
+      return fail(
+        `El rol "${rol}" abre una sección y necesita titular: una imagen sin ` +
+          "texto encima comunica un tema, no una intención. Escribe el dolor o " +
+          "la promesa con las palabras del lector. Si lo que quieres es una " +
+          "figura explicativa dentro del texto, usa el rol diagrama o anatomia, " +
+          "que sí admiten titular vacío.",
+      );
+    }
+
     const result = await generateImage({
       ebookId,
       prompt,
@@ -335,13 +353,54 @@ const executors: Record<
     });
     if ("error" in result) return fail(result.error);
 
-    // Se devuelve el Markdown montado en vez de insertarlo aquí: dónde va la
-    // imagen dentro del capítulo es una decisión de escritura, y el agente la
-    // toma mejor con edit_chapter que una heurística nuestra.
+    // Con titular, la imagen pasa por el compositor y sale ya con el mensaje
+    // dibujado en tipografía real. Componer dejó de ser un paso opcional que
+    // el agente recordaba a veces.
+    if (!titular) {
+      return {
+        output:
+          `Figura generada. Insértala donde corresponda con este Markdown:\n\n` +
+          `![${alt}](${result.url})`,
+      };
+    }
+
+    const theme = getTheme(useEbook.getState().ebook?.theme);
+    const layout: CreativeLayout = rol === "comparacion" ? "antes-despues" : "gancho";
+
+    const blob = await composeCreative(
+      {
+        layout,
+        kicker: "",
+        headline: titular,
+        subheadline: typeof input.gancho === "string" ? input.gancho.trim() : "",
+        beforeLabel: layout === "antes-despues" ? "Antes" : "",
+        beforeCaption: "",
+        afterLabel: layout === "antes-despues" ? "Después" : "",
+        afterCaption: "",
+        benefits: [],
+        accent: theme.colors.accent,
+      },
+      result.url,
+    );
+
+    const supabase = createClient();
+    const path = `${ebookId}/creativo-${crypto.randomUUID()}.png`;
+    const { error } = await supabase.storage
+      .from("images")
+      .upload(path, blob, { contentType: "image/png", upsert: false });
+
+    if (error) return fail(`No se pudo guardar el creativo: ${error.message}`);
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("images").getPublicUrl(path);
+
     return {
       output:
-        `Imagen generada. Insértala donde corresponda con este Markdown:\n\n` +
-        `![${alt}](${result.url})`,
+        `Imagen generada y montada con el titular. Insértala con:\n\n` +
+        `![${alt}](${publicUrl})\n\n` +
+        "Si necesitas rótulos por mitad o una lista de beneficios encima, " +
+        "vuelve a montarla con compose_creative sobre esta misma URL.",
     };
   },
 

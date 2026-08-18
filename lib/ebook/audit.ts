@@ -91,9 +91,14 @@ function list(positions: number[]): string {
 }
 
 /**
- * Marcadores que quedaron sin rellenar. La lista es corta y literal a
- * propósito: son las fórmulas que el modelo escribe cuando ya no está
- * redactando esa unidad concreta sino rellenando un molde.
+ * Fórmulas que el modelo escribe cuando ya no redacta esa unidad concreta sino
+ * que rellena un molde. Se buscan sobre el texto normalizado, sin acentos.
+ *
+ * Son locuciones de varias palabras a propósito. La primera versión incluía
+ * "todo" y "pendiente" —pensando en los marcadores TODO y PENDIENTE— y al
+ * pasarla por un libro real marcó siete capítulos como GRAVE por frases tan
+ * corrientes como "sobre todo" o "pendiente de la vacuna". Un informe con
+ * siete falsos GRAVE no se lee: enseña a ignorar los graves de verdad.
  */
 const PLACEHOLDERS = [
   "ingrediente principal",
@@ -102,10 +107,16 @@ const PLACEHOLDERS = [
   "segun corresponda",
   "lo que prefieras",
   "por definir",
-  "pendiente",
-  "todo",
-  "lorem",
+  "pendiente de definir",
+  "completar aqui",
 ];
+
+/**
+ * Marcadores de código, que sí son inequívocos — pero solo en mayúsculas.
+ * Se buscan sobre el texto ORIGINAL, respetando la caja: en minúsculas todos
+ * son palabras corrientes.
+ */
+const MARKERS = /\b(TODO|FIXME|XXX|TBD|LOREM IPSUM|PLACEHOLDER)\b/;
 
 export function auditBook(chapters: Chapter[]): AuditReport {
   const findings: Finding[] = [];
@@ -188,7 +199,19 @@ export function auditBook(chapters: Chapter[]): AuditReport {
   }
 
   // 2. Capítulos casi calcados aunque no compartan bloques exactos.
-  const prints = written.map((chapter) => ({
+  //
+  // Se descartan los capítulos que son un título y poco más: se parecen entre
+  // sí por construcción, y marcarlos como "casi calcados" tapa el problema
+  // real, que es que están sin escribir — de eso ya avisa la comprobación de
+  // capítulos cortos.
+  //
+  // El umbral es 60 y no 120 porque una ficha legítima —una receta, una
+  // rutina— cabe en 90 palabras, y dos fichas parafraseadas SÍ son un problema
+  // que hay que ver. Con 120 se dejaban pasar, como descubrió la prueba del
+  // parafraseo. Los capítulos vacíos que motivaron el filtro rondaban las 45.
+  const prints = written
+    .filter((chapter) => countWords(chapter.content) >= 60)
+    .map((chapter) => ({
     position: chapter.position,
     title: chapter.title,
     set: shingles(chapter.content),
@@ -222,6 +245,9 @@ export function auditBook(chapters: Chapter[]): AuditReport {
     const found = PLACEHOLDERS.filter((marker) =>
       new RegExp(`\\b${marker}\\b`).test(plain),
     );
+    const marker = MARKERS.exec(chapter.content);
+    if (marker) found.push(marker[1]);
+
     if (found.length > 0) {
       findings.push({
         severity: "grave",
@@ -240,6 +266,72 @@ export function auditBook(chapters: Chapter[]): AuditReport {
       message:
         `Capítulos por debajo de 120 palabras: ${list(thin.map((c) => c.position))}. ` +
         `Comprueba que sean breves a propósito y no esquemas a medio escribir.`,
+    });
+  }
+
+  // 5. ¿Usa el libro su propio sistema de maquetación?
+  //
+  // Medido sobre un libro real que salió de aquí: de los seis bloques
+  // disponibles usó uno, una vez. Cero fichas, cero avisos, cero checklists,
+  // cero plantillas. El prompt los describe; nada comprobaba que se usaran, y
+  // el resultado se lee como un documento de Word con imágenes sueltas.
+  const todo = written.map((chapter) => chapter.content).join("\n");
+  const bloques = [...todo.matchAll(/^:::([a-z]+)/gm)].map((match) => match[1]);
+
+  if (written.length >= 4 && bloques.length < written.length / 2) {
+    findings.push({
+      severity: "aviso",
+      message:
+        `Solo ${bloques.length} bloques de maquetación en ${written.length} capítulos ` +
+        `escritos. Un capítulo que solo tiene párrafos y viñetas se lee como un ` +
+        `documento de Word. Usa :::tip, :::dato, :::aviso, :::ficha, :::checklist ` +
+        `y :::plantilla donde el contenido los pida.`,
+    });
+  }
+
+  // 6. ¿Llegan las imágenes al final del libro?
+  //
+  // El patrón que se repite: el agente ilustra los primeros capítulos y se
+  // olvida. En el libro medido, las cinco imágenes estaban en las primeras 25
+  // páginas de 67, y de ahí al final no había ninguna.
+  const conImagen = new Set(
+    written
+      .filter((chapter) => /!\[[^\]]*\]\(/.test(chapter.content))
+      .map((chapter) => chapter.position),
+  );
+
+  if (written.length >= 6) {
+    const mitad = Math.floor(written.length / 2);
+    const segundaMitad = written.slice(mitad);
+    const ilustradosDespues = segundaMitad.filter((c) => conImagen.has(c.position));
+
+    if (conImagen.size > 0 && ilustradosDespues.length === 0) {
+      findings.push({
+        severity: "grave",
+        message:
+          `Las imágenes se acaban a media obra: hay ${conImagen.size} capítulos ` +
+          `ilustrados y ninguno está en la segunda mitad (del ${segundaMitad[0].position} ` +
+          `en adelante). El lector que llega hasta ahí nota que el libro se quedó sin gasolina.`,
+      });
+    }
+  }
+
+  // 7. La arquitectura que separa un libro de unos apuntes.
+  const APERTURA = /qu[eé] vas a conseguir|c[oó]mo usar (este|el) (libro|ebook|manual)/i;
+  const CIERRE = /plan de acci[oó]n|sobre (el|la) autor|pr[oó]ximos pasos/i;
+  const titulos = chapters.map((chapter) => chapter.title).join(" | ");
+
+  const faltan: string[] = [];
+  if (!APERTURA.test(titulos)) faltan.push('apertura ("Qué vas a conseguir", "Cómo usar este libro")');
+  if (!CIERRE.test(titulos)) faltan.push('cierre ("Plan de acción", "Sobre el autor")');
+
+  if (faltan.length > 0 && chapters.length >= 5) {
+    findings.push({
+      severity: "aviso",
+      message:
+        `Al índice le falta ${faltan.join(" y ")}. En los libros que venden, ese ` +
+        `material ocupa entre el 15% y el 25% de las páginas y es donde el lector ` +
+        `decide si confía y si termina.`,
     });
   }
 

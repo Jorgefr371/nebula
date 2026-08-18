@@ -250,10 +250,12 @@ export const TOOLS: ToolDefinition[] = [
   {
     name: "generate_image",
     description:
-      "Genera una ilustración y la sube al libro. Devuelve el Markdown listo " +
-      "para insertar. Antes de llamarla, decide QUÉ TRABAJO hace la imagen: ese " +
-      "es el parámetro rol, y es el que decide la técnica. Una imagen que solo " +
-      "repite en foto lo que dice el texto no aporta nada y engorda el fichero.",
+      "Genera una ilustración, le monta el titular encima y la sube al libro. " +
+      "Devuelve el Markdown listo para insertar. Dos decisiones antes de " +
+      "llamarla: QUÉ TRABAJO hace la imagen (rol) y QUÉ DICE (titular). Los " +
+      "roles que abren una sección exigen titular: una imagen muda comunica un " +
+      "tema, no una intención, y es lo que hace que un ebook parezca una " +
+      "carpeta de fotos con texto alrededor.",
     strict: true,
     input_schema: {
       type: "object",
@@ -281,6 +283,23 @@ export const TOOLS: ToolDefinition[] = [
             "con una barrera de seguridad; una persona entrando con las manos " +
             "ocupadas'. Nada de técnica, estilo, luz ni paleta: eso lo pone el rol.",
         },
+        titular: {
+          type: "string",
+          description:
+            "Lo que la imagen DICE, en titular grande encima. Obligatorio para " +
+            "los roles escena, seccion y comparacion: son los que abren, y sin " +
+            "titular abren en blanco. Escribe el dolor o la promesa con las " +
+            "palabras del lector — 'se te escapa cada vez que abres la puerta', " +
+            "no 'seguridad en el hogar'. Déjalo vacío SOLO en diagrama y " +
+            "anatomia, que son figuras explicativas dentro del texto y llevan " +
+            "su rótulo en el pie.",
+        },
+        gancho: {
+          type: "string",
+          description:
+            "Línea de apoyo bajo el titular: el dato que lo respalda o la " +
+            "consecuencia. Vacía si el titular se basta.",
+        },
         alt: {
           type: "string",
           description:
@@ -288,7 +307,7 @@ export const TOOLS: ToolDefinition[] = [
             "cuando la imagen no carga. Una frase descriptiva, no el prompt.",
         },
       },
-      required: ["rol", "prompt", "alt"],
+      required: ["rol", "prompt", "titular", "gancho", "alt"],
       additionalProperties: false,
     },
   },

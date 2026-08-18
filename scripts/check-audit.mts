@@ -186,6 +186,93 @@ check(
 );
 
 // ---------------------------------------------------------------------------
+// Fixture 4: las reglas que salieron de auditar un libro real de Nébula.
+// ---------------------------------------------------------------------------
+
+const cuerpo = (tema: string) =>
+  `${tema} exige atención constante durante las primeras semanas. `.repeat(14) +
+  `Conviene medir el progreso cada siete días y ajustar la rutina en función ` +
+  `de lo observado, sin cambiar más de una variable a la vez.`;
+
+const libroSinNada = [
+  ...Array.from({ length: 8 }, (_, i) =>
+    chapter(i + 1, `Capítulo sobre ${i + 1}`, cuerpo(`El asunto ${i + 1}`)),
+  ),
+];
+// Solo los tres primeros llevan imagen: el patrón medido en el libro real.
+libroSinNada[0].content += "\n\n![figura](https://img/a.png)";
+libroSinNada[1].content += "\n\n![figura](https://img/b.png)";
+libroSinNada[2].content += "\n\n![figura](https://img/c.png)";
+
+console.log("\nEl libro real que salió de Nébula");
+const informeReal = auditBook(libroSinNada);
+
+check(
+  "detecta que las imágenes se acaban a media obra",
+  has(informeReal.findings, "se acaban a media obra"),
+  formatAudit(informeReal),
+);
+check(
+  "detecta que no usa el sistema de maquetación",
+  has(informeReal.findings, "bloques de maquetación"),
+);
+check(
+  "detecta que falta la apertura y el cierre",
+  has(informeReal.findings, "apertura") && has(informeReal.findings, "cierre"),
+);
+
+// Y el contrario: un libro bien montado no debe recibir ninguno de los tres.
+const libroCompleto = [
+  chapter(1, "Qué vas a conseguir con este libro", cuerpo("La promesa")),
+  chapter(2, "Cómo usar este libro", cuerpo("El método")),
+  ...Array.from({ length: 4 }, (_, i) =>
+    chapter(i + 3, `Tema ${i + 1}`, `:::tip\nUn consejo del capítulo.\n:::\n\n${cuerpo(`Tema ${i + 1}`)}\n\n![figura](https://img/${i}.png)`),
+  ),
+  chapter(7, "Plan de acción", cuerpo("Los pasos")),
+  chapter(8, "Sobre el autor", cuerpo("Quién firma")),
+];
+
+console.log("\nUn libro bien montado");
+const informeCompleto = auditBook(libroCompleto);
+check(
+  "no se queja de las imágenes",
+  !has(informeCompleto.findings, "se acaban a media obra"),
+  formatAudit(informeCompleto),
+);
+check(
+  "no se queja de la maquetación",
+  !has(informeCompleto.findings, "bloques de maquetación"),
+);
+check(
+  "no le pide una arquitectura que ya tiene",
+  !has(informeCompleto.findings, "Al índice le falta"),
+);
+
+// El falso positivo que encontró el libro real: "todo" y "pendiente" son
+// palabras corrientes en español, y marcaban siete capítulos como GRAVE.
+console.log("\nFalsos positivos del castellano");
+const castellano = [
+  chapter(1, "Vacunas", `Sobre todo, revisa el calendario. ${cuerpo("La vacuna")}`),
+  chapter(2, "Paseos", `Queda pendiente la revisión anual. ${cuerpo("El paseo")}`),
+];
+const informeCastellano = auditBook(castellano);
+check(
+  "«sobre todo» y «pendiente» no se confunden con marcadores",
+  !has(informeCastellano.findings, "marcadores sin"),
+  formatAudit(informeCastellano),
+);
+check(
+  "pero un TODO en mayúsculas sí se detecta",
+  has(
+    auditBook([
+      chapter(1, "Uno", `TODO: rellenar esta parte. ${cuerpo("Algo")}`),
+      chapter(2, "Dos", cuerpo("Otra cosa")),
+    ]).findings,
+    "TODO",
+  ),
+);
+
+// ---------------------------------------------------------------------------
 
 console.log(
   failures === 0

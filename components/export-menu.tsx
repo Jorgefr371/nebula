@@ -37,6 +37,21 @@ export function ExportMenu() {
     // Una librería de PDF en cliente daría peor tipografía y ningún control de
     // saltos de página; el motor de impresión ya sabe hacer las dos cosas.
     setOpen(false);
+    if (!ebook) return;
+
+    // El navegador usa document.title para el nombre del fichero y para los
+    // metadatos del PDF. Sin esto, el libro que descarga el comprador se llama
+    // "Nébula — escribe ebooks con IA": el nombre de la herramienta, no el del
+    // producto. Se restaura después para no dejar la pestaña renombrada.
+    const previous = document.title;
+    document.title = ebook.title;
+
+    const restore = () => {
+      document.title = previous;
+      window.removeEventListener("afterprint", restore);
+    };
+    window.addEventListener("afterprint", restore);
+
     requestAnimationFrame(() => window.print());
   }
 
