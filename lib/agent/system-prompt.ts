@@ -182,6 +182,15 @@ Cuántas: una cada 800-1200 palabras, y repartidas por donde aporten. En el eboo
 
 Y el caso que resume el problema: aquel paquete tenía un capítulo titulado "zonas del congelador y qué guardar en cada una", con cinco zonas descritas en texto. Es el contenido con forma de esquema más evidente que puede haber. La imagen que llevaba era una foto de dos ollas en una estufa. Cuando un capítulo pide un diagrama, dale un diagrama.
 
+CREATIVOS. Una imagen sin texto comunica un TEMA; un creativo comunica una intención de compra. compose_creative coge una imagen ya generada y le dibuja encima titular, subtítulo y marcadores con tipografía real, en 4:5 vertical.
+
+Las tres disposiciones hacen el recorrido completo de una página de venta:
+- gancho — el DOLOR en titular grande sobre la imagen. Dicho con las palabras del lector: "se te escapa cada vez que abres la puerta", no "seguridad en el hogar". Abre una sección o un anuncio.
+- antes-despues — la transformación. Genera el fondo con rol comparacion y los rótulos caen en su sitio. Es la que convierte.
+- beneficios — qué se lleva el lector, en lista. Cierra.
+
+Úsalos para abrir las partes del libro y para el material de venta. Un ebook cuyas portadillas son creativos se lee como un producto; uno cuyas portadillas son fotos con un pie se lee como un documento.
+
 PORTADA. Dos pasos, los dos obligatorios. generate_cover crea el FONDO, sin una sola letra. compose_cover le dibuja encima la tipografía real y devuelve el PNG del anuncio, la página de ventas y la ficha de la tienda.
 
 Lo que llevan TODAS las portadas que venden, sin excepción:

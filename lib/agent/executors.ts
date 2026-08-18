@@ -2,6 +2,11 @@
 
 import { auditBook, formatAudit } from "@/lib/ebook/audit";
 import { composeCover } from "@/lib/cover/compose";
+import {
+  composeCreative,
+  CREATIVE_LAYOUTS,
+  type CreativeLayout,
+} from "@/lib/cover/creative";
 import { IMAGE_ROLES, isImageRole } from "@/lib/images/roles";
 import { THEMES } from "@/lib/ebook/themes";
 import { downloadBlob, slugify } from "@/lib/export/epub";
@@ -428,6 +433,64 @@ const executors: Record<
         `URL: ${composedUrl}\n\n` +
         "Compruébala en miniatura antes de darla por buena: es el tamaño al " +
         "que se ve en el anuncio.",
+    };
+  },
+
+  async compose_creative(input) {
+    const ebook = useEbook.getState().ebook;
+    if (!ebook) return fail("No hay ningún libro cargado.");
+
+    const imageUrl = String(input.image_url ?? "").trim();
+    if (!imageUrl) {
+      return fail("Falta image_url. Genera antes la imagen con generate_image.");
+    }
+
+    const layout = String(input.layout ?? "").trim() as CreativeLayout;
+    if (!CREATIVE_LAYOUTS.includes(layout)) {
+      return fail(
+        `layout tiene que ser uno de: ${CREATIVE_LAYOUTS.join(", ")}. Llegó "${layout}".`,
+      );
+    }
+
+    const accent = String(input.accent ?? "").trim();
+    if (!/^#[0-9a-fA-F]{6}$/.test(accent)) {
+      return fail(`accent tiene que ser un hexadecimal como "#D2703A"; llegó "${accent}".`);
+    }
+
+    const blob = await composeCreative(
+      {
+        layout,
+        kicker: String(input.kicker ?? ""),
+        headline: String(input.headline ?? ""),
+        subheadline: String(input.subheadline ?? ""),
+        beforeLabel: String(input.before_label ?? ""),
+        beforeCaption: String(input.before_caption ?? ""),
+        afterLabel: String(input.after_label ?? ""),
+        afterCaption: String(input.after_caption ?? ""),
+        benefits: Array.isArray(input.benefits)
+          ? input.benefits.filter((item): item is string => typeof item === "string")
+          : [],
+        accent,
+      },
+      imageUrl,
+    );
+
+    const supabase = createClient();
+    const path = `${ebook.id}/creativo-${layout}-${crypto.randomUUID()}.png`;
+    const { error } = await supabase.storage
+      .from("images")
+      .upload(path, blob, { contentType: "image/png", upsert: false });
+
+    if (error) return fail(`No se pudo guardar el creativo: ${error.message}`);
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("images").getPublicUrl(path);
+
+    return {
+      output:
+        `Creativo "${layout}" montado (${Math.round(blob.size / 1024)} KB).\n\n` +
+        `Insértalo donde corresponda con:\n![${String(input.headline ?? "Creativo")}](${publicUrl})`,
     };
   },
 

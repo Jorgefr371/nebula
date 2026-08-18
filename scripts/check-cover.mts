@@ -11,6 +11,13 @@
  */
 
 import {
+  CREATIVE_HEIGHT,
+  CREATIVE_LAYOUTS,
+  contrastOn,
+  layoutCreative,
+  type CreativeSpec,
+} from "@/lib/cover/creative";
+import {
   COVER_HEIGHT,
   COVER_WIDTH,
   fitFontSize,
@@ -220,6 +227,101 @@ check(
   measure("LONGEVIDAD", soloTitulo, "") <= CONTENT &&
     (soloTitulo === 150 || measure("LONGEVIDAD", soloTitulo + 1, "") > CONTENT),
   `cuerpo ${soloTitulo}, ancho ${Math.round(measure("LONGEVIDAD", soloTitulo, ""))} de ${CONTENT}`,
+);
+
+// ---------------------------------------------------------------------------
+
+console.log("\nCreativos de venta");
+
+const creativo: CreativeSpec = {
+  layout: "beneficios",
+  kicker: "Lo que te llevas",
+  headline: "Un hogar a prueba de husky",
+  subheadline: "",
+  beforeLabel: "",
+  beforeCaption: "",
+  afterLabel: "",
+  afterCaption: "",
+  benefits: [
+    "Rutina diaria de 20 minutos",
+    "Plan de doble barrera por estancia",
+    "Checklist de prueba de fugas",
+    "Qué hacer si ya se escapó una vez",
+    "Tabla de ejercicio por edad",
+  ],
+  accent: "#D2703A",
+};
+
+const conBeneficios = layoutCreative(creativo, measure);
+
+// El fallo que motivó reordenar el cálculo: apilando de arriba abajo, un
+// titular de tres líneas dejaba a la lista 130 píxeles y salía a cuerpo 11.
+check(
+  "los beneficios se leen: nunca por debajo de cuerpo 18",
+  conBeneficios.benefits.every((b) => b.fontSize >= 18),
+  `cuerpo ${conBeneficios.benefits[0]?.fontSize}`,
+);
+check(
+  "todos los beneficios comparten cuerpo",
+  new Set(conBeneficios.benefits.map((b) => b.fontSize)).size === 1,
+);
+check(
+  "el último beneficio cabe en el lienzo",
+  conBeneficios.benefits[conBeneficios.benefits.length - 1].y < CREATIVE_HEIGHT,
+  `último en y=${Math.round(conBeneficios.benefits.at(-1)!.y)} de ${CREATIVE_HEIGHT}`,
+);
+check(
+  "el titular no pisa la lista",
+  conBeneficios.headline !== null &&
+    conBeneficios.headline.y +
+      conBeneficios.headline.fontSize * 1.06 * (conBeneficios.headline.lines.length - 1) <
+      conBeneficios.benefits[0].y,
+);
+
+// Un titular larguísimo es lo que rompía la lista. Tiene que encogerse él.
+const titularLargo = layoutCreative(
+  {
+    ...creativo,
+    headline:
+      "Un hogar completamente a prueba de fugas para tu husky siberiano en treinta días",
+  },
+  measure,
+);
+check(
+  "un titular larguísimo se encoge en vez de comerse la lista",
+  titularLargo.benefits.every((b) => b.fontSize >= 18) &&
+    titularLargo.headline!.fontSize < conBeneficios.headline!.fontSize,
+  `titular ${titularLargo.headline?.fontSize}, beneficios ${titularLargo.benefits[0]?.fontSize}`,
+);
+
+const antesDespues = layoutCreative(
+  { ...creativo, layout: "antes-despues", benefits: [] },
+  measure,
+);
+check("antes-despues traza la divisoria", antesDespues.divider !== null);
+check("gancho no traza divisoria", layoutCreative({ ...creativo, layout: "gancho" }, measure).divider === null);
+check(
+  "el gancho ocupa el lienzo entero con imagen",
+  layoutCreative({ ...creativo, layout: "gancho" }, measure).imageBand.height ===
+    CREATIVE_HEIGHT,
+);
+check(
+  "las tres disposiciones producen un reparto válido",
+  CREATIVE_LAYOUTS.every((layout) => {
+    const l = layoutCreative({ ...creativo, layout }, measure);
+    return l.imageBand.height > 0 && l.imageBand.height <= CREATIVE_HEIGHT;
+  }),
+);
+
+// El rótulo "DESPUÉS" se pinta sobre el acento del libro, que puede ser claro
+// u oscuro según el nicho. Si el contraste no se calcula, en los temas claros
+// el rótulo desaparece.
+check(
+  "el texto de la píldora contrasta con cualquier acento",
+  contrastOn("#D2703A") === "#FFFFFF" &&
+    contrastOn("#F5E9C8") === "#111111" &&
+    contrastOn("#14181F") === "#FFFFFF",
+  `${contrastOn("#D2703A")} / ${contrastOn("#F5E9C8")} / ${contrastOn("#14181F")}`,
 );
 
 // ---------------------------------------------------------------------------

@@ -424,6 +424,96 @@ export const TOOLS: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: "compose_creative",
+    description:
+      "Monta un creativo de venta: coge una imagen ya generada y le dibuja " +
+      "encima titular, subtítulo y marcadores con tipografía real. Devuelve un " +
+      "PNG vertical 4:5, el formato del feed de Meta e Instagram. Sirve para " +
+      "abrir una sección del libro, para la página de ventas y para el anuncio. " +
+      "Una imagen sin texto comunica un tema; un creativo comunica una " +
+      "intención de compra, y es lo que separa un ebook que parece hecho con " +
+      "prisa de uno que parece un producto.",
+    strict: true,
+    input_schema: {
+      type: "object",
+      properties: {
+        image_url: {
+          type: "string",
+          description:
+            "URL de la imagen de fondo, tal y como la devolvió generate_image. " +
+            "Para 'antes-despues' usa una imagen generada con rol comparacion: " +
+            "ya viene partida en dos mitades y los rótulos caen en su sitio.",
+        },
+        layout: {
+          type: "string",
+          description:
+            "gancho (el dolor en titular grande sobre la imagen; abre una " +
+            "sección o un anuncio); antes-despues (la transformación, con " +
+            "rótulo y pie en cada mitad — es la que convierte); beneficios " +
+            "(qué se lleva el lector, en lista con marcas de verificación).",
+        },
+        kicker: {
+          type: "string",
+          description: "Antetítulo corto en versales. Vacío si no hay.",
+        },
+        headline: {
+          type: "string",
+          description:
+            "El titular. En 'gancho' es el DOLOR dicho con las palabras del " +
+            "lector, no el tema: 'Se te escapa cada vez que abres la puerta' " +
+            "funciona; 'seguridad en el hogar' no.",
+        },
+        subheadline: {
+          type: "string",
+          description: "Una línea de apoyo. Vacía si no hace falta.",
+        },
+        before_label: {
+          type: "string",
+          description: "Rótulo de la mitad izquierda: 'Antes'. Solo en antes-despues.",
+        },
+        before_caption: {
+          type: "string",
+          description: "Pie de la mitad izquierda: qué pasa hoy. Solo en antes-despues.",
+        },
+        after_label: {
+          type: "string",
+          description: "Rótulo de la mitad derecha: 'Después'. Solo en antes-despues.",
+        },
+        after_caption: {
+          type: "string",
+          description: "Pie de la mitad derecha: qué pasa al aplicarlo.",
+        },
+        benefits: {
+          type: "array",
+          description:
+            "Hasta cinco beneficios, uno por línea. Dichos en resultado, no en " +
+            "característica. Solo en el layout beneficios.",
+          items: { type: "string" },
+        },
+        accent: {
+          type: "string",
+          description:
+            "Color de acento en hexadecimal (#RRGGBB). El mismo en todos los " +
+            "creativos del libro, y a juego con su tema.",
+        },
+      },
+      required: [
+        "image_url",
+        "layout",
+        "kicker",
+        "headline",
+        "subheadline",
+        "before_label",
+        "before_caption",
+        "after_label",
+        "after_caption",
+        "benefits",
+        "accent",
+      ],
+      additionalProperties: false,
+    },
+  },
 ];
 
 export const TOOL_NAMES = TOOLS.map((tool) => tool.name);
@@ -444,4 +534,5 @@ export const TOOL_LABELS: Record<string, string> = {
   generate_cover: "Diseñando la portada",
   audit_book: "Revisando el libro",
   compose_cover: "Montando la portada",
+  compose_creative: "Montando el creativo",
 };
