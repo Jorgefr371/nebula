@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { bookCss } from "@/lib/ebook/book-css";
 import { renderMarkdownSafe } from "@/lib/ebook/render";
 import { useEbook } from "@/lib/store/ebook";
 import { createClient } from "@/lib/supabase/client";
@@ -72,6 +73,12 @@ export function EbookPreview() {
     // print-flow: al imprimir, este contenedor con scroll propio tiene que
     // soltar su altura, o el PDF sale recortado a la altura de la pantalla.
     <div className="print-flow h-full overflow-y-auto bg-background scrollbar-thin">
+      {/* El tema se inyecta como hoja de estilos en vez de como estilo en
+          línea: así las reglas de los bloques —que son selectores, no
+          variables— viven en el mismo sitio que las variables que usan, y el
+          EPUB consume exactamente la misma función. */}
+      <style>{bookCss(ebook?.theme, ".ebook-page")}</style>
+
       <div className="ebook-page">
         {selectedChapterId === null && ebook ? (
           <header className="ebook-titlepage">

@@ -2,6 +2,7 @@
 
 import { auditBook, formatAudit } from "@/lib/ebook/audit";
 import { composeCover } from "@/lib/cover/compose";
+import { THEMES } from "@/lib/ebook/themes";
 import { downloadBlob, slugify } from "@/lib/export/epub";
 import { countWords, type Chapter, type Ebook } from "@/lib/ebook/types";
 import { useEbook } from "@/lib/store/ebook";
@@ -69,12 +70,23 @@ const executors: Record<
       "author",
       "language",
       "description",
+      "theme",
       "image_style",
     ] as const) {
       const value = input[key];
       if (typeof value === "string" && value.trim()) {
         patch[key] = value.trim();
       }
+    }
+
+    // Un tema inexistente caería en silencio al neutro, y el agente creería
+    // haber elegido culinario mientras el libro sale editorial. Mejor fallar y
+    // que vea la lista.
+    if (patch.theme && !THEMES.some((theme) => theme.id === patch.theme)) {
+      return fail(
+        `El tema "${patch.theme}" no existe. Los disponibles son: ` +
+          THEMES.map((theme) => `${theme.id} (${theme.para})`).join("; "),
+      );
     }
 
     if (Object.keys(patch).length === 0) {

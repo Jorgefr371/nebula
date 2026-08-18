@@ -15,6 +15,12 @@ export type Ebook = {
    * cada prompt, así la coherencia no depende de que el agente se acuerde.
    */
   image_style: string | null;
+  /**
+   * Tema de maquetación. Fija paleta y tipografía en el preview, el PDF y el
+   * EPUB, para que dos libros del mismo nicho se reconozcan como hermanos.
+   * Valores en lib/ebook/themes.ts.
+   */
+  theme: string;
   status: EbookStatus;
   created_at: string;
   updated_at: string;

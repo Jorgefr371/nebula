@@ -1,4 +1,9 @@
 import { marked } from "marked";
+import { ebookBlockExtension } from "@/lib/ebook/blocks";
+
+// Se registra una sola vez a nivel de módulo. marked.use() acumula: llamarlo
+// dentro de renderMarkdown añadiría la extensión otra vez en cada capítulo.
+marked.use({ extensions: [ebookBlockExtension] });
 
 /**
  * Markdown → HTML.
@@ -12,11 +17,25 @@ export function renderMarkdown(markdown: string): string {
   return html as string;
 }
 
+/**
+ * Saneado.
+ *
+ * `class` ya viene permitida en el perfil html, así que los bloques sobreviven
+ * sin tocar nada. Lo que sí hay que quitar es `style`, que el perfil también
+ * permite: un solo `<p style="color:red">` emitido por el modelo se salta el
+ * tema del libro, y el tema existe precisamente para que eso no pase. El diseño
+ * lo decide la hoja de estilos; el modelo elige qué bloque usa, no cómo se ve.
+ */
+const SANITIZE = {
+  USE_PROFILES: { html: true },
+  FORBID_ATTR: ["style"],
+};
+
 /** Versión saneada, solo para navegador (DOMPurify necesita DOM). */
 export async function renderMarkdownSafe(markdown: string): Promise<string> {
   const html = renderMarkdown(markdown);
   const { default: DOMPurify } = await import("dompurify");
-  return DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+  return DOMPurify.sanitize(html, SANITIZE);
 }
 
 const VOID_ELEMENTS = ["br", "hr", "img", "input", "meta", "link"];

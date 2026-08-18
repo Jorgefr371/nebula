@@ -2,6 +2,7 @@
 
 import JSZip from "jszip";
 import type { Chapter, Ebook } from "@/lib/ebook/types";
+import { bookCss } from "@/lib/ebook/book-css";
 import { escapeXml, renderMarkdown, toXhtml } from "@/lib/ebook/render";
 
 /**
@@ -41,7 +42,9 @@ export async function buildEpub(
 </container>`,
   );
 
-  zip.file("OEBPS/style.css", EPUB_STYLESHEET);
+  // El tema y los bloques salen de la misma función que usa el preview, así
+  // que lo que se ve en pantalla es lo que llega al lector de ebooks.
+  zip.file("OEBPS/style.css", EPUB_STYLESHEET + "\n" + bookCss(ebook.theme));
 
   const written = chapters.filter((chapter) => chapter.content.trim());
 

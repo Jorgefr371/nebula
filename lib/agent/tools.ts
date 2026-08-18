@@ -45,6 +45,17 @@ export const TOOLS: ToolDefinition[] = [
           description:
             "Sinopsis de 2-4 frases, del tipo que iría en la contraportada.",
         },
+        theme: {
+          type: "string",
+          description:
+            "Tema de maquetación, por nicho. Fija paleta y tipografía en el " +
+            "preview, el PDF y el EPUB. Elígelo al crear el libro y no lo " +
+            "cambies a mitad. Valores: editorial (neutro, ensayo y " +
+            "divulgación), culinario (recetarios y meal prep), bienestar " +
+            "(salud, longevidad, hábitos), crianza (maternidad y educación " +
+            "infantil), negocio (marketing, ventas, productividad), creativo " +
+            "(manualidades, packs de prompts y plantillas).",
+        },
         image_style: {
           type: "string",
           description:
@@ -62,6 +73,7 @@ export const TOOLS: ToolDefinition[] = [
         "author",
         "language",
         "description",
+        "theme",
         "image_style",
       ],
       additionalProperties: false,
