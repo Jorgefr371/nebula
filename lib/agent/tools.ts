@@ -288,6 +288,23 @@ export const TOOLS: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: "audit_book",
+    description:
+      "Revisa el libro entero buscando repeticiones entre capítulos, " +
+      "marcadores sin rellenar y capítulos demasiado cortos. Ejecútalo " +
+      "obligatoriamente antes de dar el libro por terminado, y también cada " +
+      "vez que lleves unos diez capítulos escritos: el riesgo de acabar " +
+      "repitiendo una plantilla crece con la longitud del libro y no se ve " +
+      "desde dentro de un capítulo.",
+    strict: true,
+    input_schema: {
+      type: "object",
+      properties: {},
+      required: [],
+      additionalProperties: false,
+    },
+  },
 ];
 
 export const TOOL_NAMES = TOOLS.map((tool) => tool.name);
@@ -306,4 +323,5 @@ export const TOOL_LABELS: Record<string, string> = {
   move_chapter: "Reordenando",
   generate_image: "Generando ilustración",
   generate_cover: "Diseñando la portada",
+  audit_book: "Revisando el libro",
 };

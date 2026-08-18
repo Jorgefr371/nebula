@@ -1,5 +1,6 @@
 "use client";
 
+import { auditBook, formatAudit } from "@/lib/ebook/audit";
 import { countWords, type Chapter, type Ebook } from "@/lib/ebook/types";
 import { useEbook } from "@/lib/store/ebook";
 import { createClient } from "@/lib/supabase/client";
@@ -333,6 +334,13 @@ const executors: Record<
     if (data) useEbook.getState().applyRemoteEbook(data as Ebook);
 
     return { output: "Portada generada y asignada al libro." };
+  },
+
+  async audit_book() {
+    // Se lee del store y no de Postgres: el store ya va sincronizado por
+    // Realtime, y auditar lo que el usuario tiene delante evita informar sobre
+    // una versión que ya no existe.
+    return { output: formatAudit(auditBook(useEbook.getState().chapters)) };
   },
 };
 
