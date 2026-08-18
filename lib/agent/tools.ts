@@ -305,6 +305,88 @@ export const TOOLS: ToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: "compose_cover",
+    description:
+      "Monta la portada de venta: coge la imagen creada por generate_cover y le " +
+      "dibuja encima la tipografía, la cinta de beneficios y el sello. Devuelve " +
+      "un PNG que se descarga solo y sirve para el anuncio, la página de ventas " +
+      "y la miniatura de la tienda. Ejecútalo SIEMPRE después de generate_cover: " +
+      "una foto sin texto no es una portada, y es lo único que el comprador ve " +
+      "antes de pagar. El texto lo escribes tú aquí; no lo pidas dentro de la " +
+      "imagen, que es donde los modelos lo deforman.",
+    strict: true,
+    input_schema: {
+      type: "object",
+      properties: {
+        kicker: {
+          type: "string",
+          description:
+            "Antetítulo en versales, la promesa en cinco palabras: 'COME " +
+            "SALUDABLE, AHORRA TIEMPO'. Cadena vacía si no aplica.",
+        },
+        title: {
+          type: "string",
+          description: "Primera parte del título, en blanco.",
+        },
+        highlight: {
+          type: "string",
+          description:
+            "Segunda parte del título, en el color de acento. Vacío si el " +
+            "título va de una pieza. Pártelo por donde caiga el énfasis.",
+        },
+        script: {
+          type: "string",
+          description:
+            "Línea en cursiva bajo el título, en caja mixta: 'para Congelar'. " +
+            "Vacío si no hay.",
+        },
+        ribbon: {
+          type: "array",
+          description:
+            "Palabras de la cinta, que resumen el método en verbos: " +
+            "['ORGANIZA','PREPARA','CONGELA','DISFRUTA']. Vacío si no hay.",
+          items: { type: "string" },
+        },
+        benefits: {
+          type: "array",
+          description:
+            "Beneficios del panel inferior, de dos o tres palabras cada uno. " +
+            "Máximo cinco: a partir de ahí no se leen en miniatura.",
+          items: { type: "string" },
+        },
+        badge_number: {
+          type: "string",
+          description:
+            "Cifra del sello: '68'. Tiene que ser el número REAL de unidades " +
+            "del libro: es lo que el comprador va a contar. Vacío si no hay sello.",
+        },
+        badge_label: {
+          type: "string",
+          description: "Etiqueta bajo la cifra: 'recetas'. Vacío si no hay sello.",
+        },
+        accent: {
+          type: "string",
+          description:
+            "Color de acento en hexadecimal (#RRGGBB) para el destacado, la " +
+            "cinta y el sello. Sácalo del propio fondo para que la portada se " +
+            "lea como una sola pieza.",
+        },
+      },
+      required: [
+        "kicker",
+        "title",
+        "highlight",
+        "script",
+        "ribbon",
+        "benefits",
+        "badge_number",
+        "badge_label",
+        "accent",
+      ],
+      additionalProperties: false,
+    },
+  },
 ];
 
 export const TOOL_NAMES = TOOLS.map((tool) => tool.name);
@@ -324,4 +406,5 @@ export const TOOL_LABELS: Record<string, string> = {
   generate_image: "Generando ilustración",
   generate_cover: "Diseñando la portada",
   audit_book: "Revisando el libro",
+  compose_cover: "Montando la portada",
 };

@@ -1,6 +1,8 @@
 "use client";
 
 import { auditBook, formatAudit } from "@/lib/ebook/audit";
+import { composeCover } from "@/lib/cover/compose";
+import { downloadBlob, slugify } from "@/lib/export/epub";
 import { countWords, type Chapter, type Ebook } from "@/lib/ebook/types";
 import { useEbook } from "@/lib/store/ebook";
 import { createClient } from "@/lib/supabase/client";
@@ -334,6 +336,73 @@ const executors: Record<
     if (data) useEbook.getState().applyRemoteEbook(data as Ebook);
 
     return { output: "Portada generada y asignada al libro." };
+  },
+
+  async compose_cover(input) {
+    const ebook = useEbook.getState().ebook;
+    if (!ebook) return fail("No hay ningún libro cargado.");
+    if (!ebook.cover_path) {
+      return fail(
+        "El libro todavía no tiene portada de fondo. Ejecuta generate_cover " +
+          "antes de componerla.",
+      );
+    }
+
+    const accent = String(input.accent ?? "").trim();
+    if (!/^#[0-9a-fA-F]{6}$/.test(accent)) {
+      return fail(
+        `accent tiene que ser un hexadecimal de seis dígitos como "#7FB539"; llegó "${accent}".`,
+      );
+    }
+
+    const strings = (value: unknown): string[] =>
+      Array.isArray(value)
+        ? value.filter((item): item is string => typeof item === "string")
+        : [];
+
+    const supabase = createClient();
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("images").getPublicUrl(ebook.cover_path);
+
+    const blob = await composeCover(
+      {
+        kicker: String(input.kicker ?? ""),
+        title: String(input.title ?? ""),
+        highlight: String(input.highlight ?? ""),
+        script: String(input.script ?? ""),
+        ribbon: strings(input.ribbon),
+        benefits: strings(input.benefits),
+        badgeNumber: String(input.badge_number ?? ""),
+        badgeLabel: String(input.badge_label ?? ""),
+        accent,
+      },
+      publicUrl,
+    );
+
+    // Se sube Y se descarga. Subirla la deja disponible para el equipo desde el
+    // otro ordenador; descargarla la pone en las manos de quien montará el
+    // anuncio, que es quien la necesita ahora mismo.
+    const path = `${ebook.id}/portada-compuesta-${crypto.randomUUID()}.png`;
+    const { error } = await supabase.storage
+      .from("images")
+      .upload(path, blob, { contentType: "image/png", upsert: false });
+
+    if (error) return fail(`No se pudo guardar la portada: ${error.message}`);
+
+    downloadBlob(blob, `${slugify(ebook.title)}-portada.png`);
+
+    const {
+      data: { publicUrl: composedUrl },
+    } = supabase.storage.from("images").getPublicUrl(path);
+
+    return {
+      output:
+        `Portada montada y descargada (${Math.round(blob.size / 1024)} KB). ` +
+        `URL: ${composedUrl}\n\n` +
+        "Compruébala en miniatura antes de darla por buena: es el tamaño al " +
+        "que se ve en el anuncio.",
+    };
   },
 
   async audit_book() {

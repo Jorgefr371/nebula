@@ -10,7 +10,8 @@
     "check:epub": "tsx scripts/check-epub.mts",
     "check:provider": "tsx scripts/check-provider.mts",
     "check:realtime": "tsx scripts/check-realtime.mts",
-    "check:audit": "tsx scripts/check-audit.mts"
+    "check:audit": "tsx scripts/check-audit.mts",
+    "check:cover": "tsx scripts/check-cover.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.117.1",

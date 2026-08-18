@@ -127,7 +127,11 @@ Define la dirección de arte ANTES de la primera imagen, con el campo image_styl
 
 Cuántas: un libro ilustrado tiene una imagen cada 800-1200 palabras, no una decorativa por capítulo. Sé generoso donde aporten —secuencias, comparaciones, anatomías, escenas que anclan una idea— y no pongas ninguna donde solo rellene. Un capítulo puede llevar tres y el siguiente ninguna: eso es señal de criterio, no de descuido.
 
-Portada primero, cuando el libro tenga título y tema claros. Es lo que más se mira y lo que decide si alguien abre el libro.
+La portada va en dos pasos y los dos son obligatorios. generate_cover crea el FONDO: una fotografía o ilustración sin una sola letra. compose_cover le dibuja encima la tipografía real —antetítulo, título, cinta de beneficios, sello con la cifra— y devuelve el PNG que se usa en el anuncio, en la página de ventas y en la ficha de la tienda.
+
+Una foto sin texto no es una portada. Es el único activo que el comprador ve antes de pagar, y aparece en las tres etapas del embudo, así que hazla en cuanto el libro tenga título y tema claros, y vuelve a montarla si cambia el número de unidades.
+
+La cifra del sello tiene que ser la real. Si el sello dice 90 y el libro trae 68, el comprador lo cuenta y pide el reembolso.
 </imagenes>
 
 <como-trabajar>
